@@ -3,7 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Flange Rate Calculator</title>
+    <title>Flange Rate Calculator - jsPDF Version</title>
+    <!-- jsPDF and html2canvas Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
       :root {
         --bg: #f5f7fb;
@@ -138,15 +141,85 @@
       .btn:active {
         transform: translateY(1px);
       }
-      .no-print {
-      }
       #printArea {
-        display: none;
+        position: absolute;
+        left: -9999px;
+        top: -9999px;
+        background: #fff;
       }
-
-      /* --- Modal Styles --- */
+      .print-wrap {
+        width: 800px;
+        padding: 15mm;
+        font-family: Inter, system-ui, Segoe UI, Roboto, Arial, sans-serif;
+        color: #111827;
+        position: relative;
+        z-index: 2;
+      }
+      .print-background-logo {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 80%;
+        height: 80%;
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: contain;
+        opacity: 0.08;
+        z-index: 1;
+      }
+      .print-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+      }
+      .print-brand {
+        max-width: 65%;
+      }
+      .print-brand h1 {
+        margin: 0;
+        font-size: 22px;
+      }
+      .print-meta {
+        font-size: 12px;
+        color: #374151;
+      }
+      .print-title {
+        font-size: 18px;
+        font-weight: 800;
+        text-align: center;
+        margin: 10px 0 14px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+      th,
+      td {
+        border: 1px solid #e5e7eb;
+        padding: 6px;
+        text-align: right;
+      }
+      th:first-child,
+      td:first-child {
+        text-align: left;
+      }
+      .total-box {
+        margin-top: 12px;
+        padding: 10px;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+      }
+      .total-line {
+        display: flex;
+        justify-content: space-between;
+        font-size: 16px;
+        font-weight: 800;
+      }
       .modal-overlay {
-        display: none; /* Hidden by default */
+        display: none;
         position: fixed;
         z-index: 1000;
         left: 0;
@@ -202,101 +275,15 @@
           transform: scale(1);
         }
       }
-
-      @media print {
-        @page {
-          size: auto;
-          margin: 0;
-        }
-        body {
-          background: #fff;
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
-        }
-        body > * { display: none !important; }
-        #printArea { display: block !important; position: static !important; margin: 0; padding: 0; }
-        #printArea * { visibility: visible !important; }
-        .print-wrap {
-          max-width: 800px;
-          margin: 0 auto;
-          padding: 15mm; /* Add padding to compensate for zero margin */
-          font-family: Inter, system-ui, Segoe UI, Roboto, Arial, sans-serif;
-          color: #111827;
-          position: relative;
-          z-index: 2;
-        }
-        .print-background-logo {
-          visibility: visible !important;
-          position: fixed;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          width: 70vw;
-          height: 70vh;
-          background-repeat: no-repeat;
-          background-position: center;
-          background-size: contain;
-          opacity: 0.08; /* Light opacity for watermark */
-          z-index: 1;
-        }
-        .print-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 12px;
-        }
-        .print-brand {
-          max-width: 65%; /* Prevent brand info from taking up too much space */
-        }
-        .print-brand h1 {
-          margin: 0;
-          font-size: 22px;
-        }
-        .print-meta {
-          font-size: 12px;
-          color: #374151;
-        }
-        .print-title {
-          font-size: 18px;
-          font-weight: 800;
-          text-align: center;
-          margin: 10px 0 14px;
-        }
-        table {
-          width: 100%;
-          border-collapse: collapse;
-          font-size: 12px;
-        }
-        th,
-        td {
-          border: 1px solid #e5e7eb;
-          padding: 6px;
-          text-align: right;
-        }
-        th:first-child,
-        td:first-child {
-          text-align: left;
-        }
-        .total-box {
-          margin-top: 12px;
-          padding: 10px;
-          border: 1px solid #e5e7eb;
-          border-radius: 10px;
-        }
-        .total-line {
-          display: flex;
-          justify-content: space-between;
-          font-size: 16px;
-          font-weight: 800;
-        }
-      }
     </style>
   </head>
   <body>
     <div class="wrap">
-      <div class="card block"><label class="small">Select Product</label><select id="productPick" style="position:relative; z-index:10000; pointer-events:auto;"></select></div>
-
-    <div class="card block">
+      <div class="card block">
+        <label class="small">Select Product</label
+        ><select id="productPick"></select>
+      </div>
+      <div class="card block">
         <label class="small">Select Product Template</label>
         <select id="rowPick"></select>
         <div class="quote">
@@ -304,23 +291,20 @@
           <div class="amt" id="finalAmt">₹0.00</div>
         </div>
       </div>
-
       <div class="card" style="margin-top: 14px">
         <div class="section-title">Client Specifications & Rates</div>
         <div class="block">
           <div class="inputs-grid" id="inputs"></div>
         </div>
       </div>
-
       <div class="card" style="margin-top: 14px">
         <div class="section-title">Calculated Results</div>
         <div class="block">
           <div class="grid-3" id="results"></div>
         </div>
       </div>
-
       <div
-        class="card no-print"
+        class="card"
         style="margin-top: 24px; padding: 16px; text-align: center"
       >
         <button
@@ -337,7 +321,6 @@
           Generate & Share PDF
         </button>
       </div>
-
       <div id="printArea">
         <div id="printBackgroundLogo" class="print-background-logo"></div>
         <div class="print-wrap" id="printWrap"></div>
@@ -433,1207 +416,22 @@
                 justify-content: flex-end;
               "
             >
-              <button id="btnPDF" class="btn">Confirm & Print PDF</button>
+              <button id="btnPDF" class="btn">Confirm & Download PDF</button>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <script>
-      // --- START: UNCHANGED CORE LOGIC ---
-      const INPUT_COLS = [
-        "B",
-        "C",
-        "D",
-        "E",
-        "F",
-        "G",
-        "H",
-        "S",
-        "T",
-        "U",
-        "Y",
-      ];
-      const INPUT_HEADERS = {
-        B: "OD OF FLANGE (mm)",
-        C: "ID (BORE) OF FLANGE (mm)",
-        D: "FINAL THICKNESS (mm)",
-        E: "NOS. OF HOLES",
-        F: "HOLE DIA. (mm)",
-        G: "R.F DIA",
-        H: "FACE MACHINIG (1/2)",
-        S: "PROFILE CUTTING RATE",
-        T: "ID RATE",
-        U: "CHIPS RATE",
-        Y: "TOTAL M/C RATE",
-      };
-      const ROWS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
-      const ROW_LABELS = {
-        8: "1/2''",
-        9: "3/4''",
-        10: "1''",
-        11: '1.25"',
-        12: "1.5''",
-        13: '2"',
-        14: "2.5''",
-        15: "3''",
-        16: "4''",
-        17: "5''",
-        18: "6''",
-        19: "8''",
-        20: "10''",
-        21: '12"',
-      };
-      const DEFAULTS = {
-        8: {
-          B: 89.0,
-          C: 22.5,
-          D: 11.7,
-          E: 4.0,
-          F: 16.0,
-          G: 35.0,
-          H: 1.5,
-          S: 56.0,
-          T: 35.0,
-          U: 30.0,
-          Y: 12.0,
-        },
-        9: {
-          B: 98.5,
-          C: 28.5,
-          D: 12.7,
-          E: 4.0,
-          F: 16.0,
-          G: 43.0,
-          H: 1.5,
-          S: 56.0,
-          T: 35.0,
-          U: 30.0,
-          Y: 12.0,
-        },
-        10: {
-          B: 108.0,
-          C: 35.5,
-          D: 14.5,
-          E: 4.0,
-          F: 16.0,
-          G: 51.0,
-          H: 1.5,
-          S: 55.0,
-          T: 35.0,
-          U: 30.0,
-          Y: 12.0,
-        },
-        11: {
-          B: 117.5,
-          C: 44.0,
-          D: 16.0,
-          E: 4.0,
-          F: 16.0,
-          G: 63.5,
-          H: 1.5,
-          S: 55.0,
-          T: 35.0,
-          U: 30.0,
-          Y: 12.0,
-        },
-        12: {
-          B: 127.0,
-          C: 50.5,
-          D: 17.5,
-          E: 4.0,
-          F: 16.0,
-          G: 73.0,
-          H: 1.5,
-          S: 62.0,
-          T: 35.0,
-          U: 30.0,
-          Y: 13.0,
-        },
-        13: {
-          B: 152.4,
-          C: 62.0,
-          D: 19.1,
-          E: 4.0,
-          F: 19.0,
-          G: 92.0,
-          H: 1.5,
-          S: 60.5,
-          T: 35.0,
-          U: 30.0,
-          Y: 12.0,
-        },
-        14: {
-          B: 177.8,
-          C: 78.0,
-          D: 22.5,
-          E: 4.0,
-          F: 19.0,
-          G: 104.5,
-          H: 1.5,
-          S: 63.0,
-          T: 35.0,
-          U: 30.0,
-          Y: 18.0,
-        },
-        15: {
-          B: 190.5,
-          C: 91.5,
-          D: 23.8,
-          E: 4.0,
-          F: 19.0,
-          G: 127.0,
-          H: 1.5,
-          S: 59.5,
-          T: 38.0,
-          U: 30.0,
-          Y: 18.0,
-        },
-        16: {
-          B: 228.5,
-          C: 116.0,
-          D: 23.8,
-          E: 8.0,
-          F: 19.0,
-          G: 157.0,
-          H: 1.5,
-          S: 59.5,
-          T: 42.0,
-          U: 30.0,
-          Y: 25.0,
-        },
-        17: {
-          B: 254.0,
-          C: 144.0,
-          D: 23.8,
-          E: 8.0,
-          F: 22.0,
-          G: 186.0,
-          H: 1.5,
-          S: 68.0,
-          T: 50.0,
-          U: 30.0,
-          Y: 30.0,
-        },
-        18: {
-          B: 279.4,
-          C: 171.5,
-          D: 25.4,
-          E: 8.0,
-          F: 22.0,
-          G: 216.0,
-          H: 1.5,
-          S: 61.5,
-          T: 50.0,
-          U: 30.0,
-          Y: 35.0,
-        },
-        19: {
-          B: 343.0,
-          C: 222.0,
-          D: 28.6,
-          E: 8.0,
-          F: 22.0,
-          G: 270.0,
-          H: 2.0,
-          S: 64.5,
-          T: 50.0,
-          U: 30.0,
-          Y: 45.0,
-        },
-        20: {
-          B: 406.4,
-          C: 276.0,
-          D: 30.2,
-          E: 12.0,
-          F: 25.4,
-          G: 324.0,
-          H: 2.0,
-          S: 68.5,
-          T: 50.0,
-          U: 30.0,
-          Y: 55.0,
-        },
-        21: {
-          B: 482.6,
-          C: 327.0,
-          D: 31.8,
-          E: 12.0,
-          F: 25.4,
-          G: 381.0,
-          H: 2.0,
-          S: 68.5,
-          T: 50.0,
-          U: 30.0,
-          Y: 65.0,
-        },
-      };
-      const OUTPUT_ORDER = [
-        "I",
-        "J",
-        "K",
-        "L",
-        "M",
-        "N",
-        "O",
-        "P",
-        "Q",
-        "W",
-        "R",
-        "X",
-        "V",
-        "Z",
-        "AA",
-        "AB",
-      ];
-      const OUTPUT_LABELS = {
-        I: "OD OF CIRCLE (mm)",
-        J: "THICKNESS OF CIRCLE (mm)",
-        K: "CIRCLE WEIGHT (KG)",
-        L: "ID CHIPS WEIGHT(KG)",
-        M: "FACING CHIPS WEIGHT (KG)",
-        N: "OD CHIPS WEIGHT (KG)",
-        O: "HOLE CHIPS WEIGHT (KG)",
-        P: "R.F CHIPS WEIGHT (KG)",
-        Q: "TOTAL CHIPS WEIGHT    (KG)",
-        W: "ID RATE",
-        R: "ID WEIGHT",
-        X: "RAW CIRCLE RATE",
-        V: "SCRAP CHIPS RATE",
-        Z: "MFG RATE",
-        AA: "SELLING ",
-        AB: "WEIGHT OF FLANGE",
-      };
-      const OUTPUT_DECIMALS = {
-        I: 2,
-        J: 2,
-        K: 3,
-        L: 3,
-        M: 3,
-        N: 3,
-        O: 3,
-        P: 3,
-        Q: 3,
-        R: 3,
-        V: 2,
-        W: 2,
-        X: 2,
-        Z: 2,
-        AA: 0,
-        AB: 3,
-      };
-      const PI = 3.14,
-        DENS = 0.00000785;
-
-      function computeOutputs(IN) {
-        const B = n(IN.B),
-          C = n(IN.C),
-          D = n(IN.D),
-          E = n(IN.E),
-          F = n(IN.F),
-          G = n(IN.G),
-          H = n(IN.H),
-          S = n(IN.S),
-          T = n(IN.T),
-          U = n(IN.U),
-          Y = n(IN.Y);
-        const I = B + 4;
-        const J = D + H;
-        const K = ((1.02 * PI * I * I * J) / 4) * DENS;
-        const L =
-          ((PI * J * C * C) / 4) * DENS -
-          ((PI * J * (C - 14) * (C - 14)) / 4) * DENS;
-        const M = ((PI * H * B * B) / 4) * DENS - ((PI * H * C * C) / 4) * DENS;
-        const N = ((PI * D * I * I) / 4) * DENS - ((PI * D * B * B) / 4) * DENS;
-        const O = ((PI * F * F * D) / 4) * DENS * E;
-        const P = (typeof G !== 'undefined' && G) ? ((PI*B*B/4)*DENS - (PI*G*G/4)*DENS) : 0;
-        const Q = L + M + N + O + P;
-        const R = ((PI * J * (C - 14) * (C - 14)) / 4) * DENS;
-        const V = Q * U * 0.95;
-        const W = R * T * 0.98;
-        const X = K * S;
-        const Z = X + Y - W - V;
-        const AA = Z * 1.1;
-        const AB = K - R - Q;
-        return { I, J, K, L, M, N, O, P, Q, R, V, W, X, Z, AA, AB };
-      }
-
-      function n(v) {
-        const t = Number(v);
-        return isFinite(t) ? t : 0;
-      }
-      function fmtDec(v, d) {
-        return (
-          Math.round((n(v) + Number.EPSILON) * Math.pow(10, d)) /
-          Math.pow(10, d)
-        ).toFixed(d);
-      }
-      function inr(v, d) {
-        try {
-          return new Intl.NumberFormat("en-IN", {
-            style: "currency",
-            currency: "INR",
-            minimumFractionDigits: d,
-            maximumFractionDigits: d,
-          }).format(n(v));
-        } catch (e) {
-          return "₹" + fmtDec(v, d);
-        }
-      }
-
-      const INPUT_LABEL_SET = new Set(
-        Object.values(INPUT_HEADERS).map((s) => String(s).trim().toLowerCase())
-      );
-      function outLabel(col) {
-        const raw = OUTPUT_LABELS[col] || col;
-        return INPUT_LABEL_SET.has(String(raw).trim().toLowerCase())
-          ? raw + " (calc)"
-          : raw;
-      }
-
-      let currentRow = ROWS[0];
-      function populateDropdown() {
-        const sel = document.getElementById("rowPick");
-        sel.innerHTML = "";
-        ROWS.forEach((r) => {
-          const o = document.createElement("option");
-          o.value = r;
-          o.textContent = ROW_LABELS[r];
-          sel.appendChild(o);
-        });
-        for (const r of ROWS) {
-          if (String(ROW_LABELS[r]).includes("12")) {
-            sel.value = r;
-            currentRow = r;
-            break;
-          }
-        }
-        sel.addEventListener("change", () => {
-          currentRow = parseInt(sel.value, 10);
-          renderInputs();
-          recalc();
-        });
-      }
-
-      function renderInputs() {
-        const box = document.getElementById("inputs");
-        box.innerHTML = "";
-        const d = DEFAULTS[currentRow] || {};
-        INPUT_COLS.forEach((c) => {
-          const w = document.createElement("div");
-          const lab = document.createElement("label");
-          lab.className = "small";
-          lab.textContent = INPUT_HEADERS[c] || c;
-          const inp = document.createElement("input");
-          inp.type = "number";
-          inp.step = "any";
-          inp.id = "IN_" + c;
-          inp.value = d[c] == null ? "" : d[c];
-          inp.addEventListener("input", recalc);
-          w.appendChild(lab);
-          w.appendChild(inp);
-          box.appendChild(w);
-        });
-      }
-
-      function getIN() {
-        const o = {};
-        INPUT_COLS.forEach((c) => {
-          const el = document.getElementById("IN_" + c);
-          o[c] = n(el && el.value);
-        });
-        return o;
-      }
-
-      function recalc() {
-        const IN = getIN();
-        const O = computeOutputs(IN);
-        document.getElementById("finalAmt").textContent = inr(
-          O.AA,
-          OUTPUT_DECIMALS["AA"] ?? 0
-        );
-        const grid = document.getElementById("results");
-        grid.innerHTML = "";
-        OUTPUT_ORDER.forEach((col) => {
-          const wrap = document.createElement("div");
-          wrap.className = "pair";
-          const k = document.createElement("div");
-          k.className = "k";
-          k.textContent = outLabel(col);
-          const v = document.createElement("div");
-          v.className = "v";
-          v.textContent = fmtDec(O[col], OUTPUT_DECIMALS[col] ?? 2);
-          wrap.appendChild(k);
-          wrap.appendChild(v);
-          grid.appendChild(wrap);
-        });
-      }
-
-      // ---- PDF & Logo helpers ----
-      function handleLogoUpload(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function (e) {
-          const logoDataUrl = e.target.result;
-          try {
-            localStorage.setItem("brandLogo", logoDataUrl);
-            document.getElementById("logoPreview").src = logoDataUrl;
-          } catch (err) {
-            console.error("Error saving logo to localStorage:", err);
-            // Optionally, inform the user that the logo could not be saved.
-          }
-        };
-        reader.readAsDataURL(file);
-      }
-      function loadLogo() {
-        try {
-          const savedLogo = localStorage.getItem("brandLogo");
-          if (savedLogo) {
-            document.getElementById("logoPreview").src = savedLogo;
-          }
-        } catch (err) {
-          console.error("Error loading logo from localStorage:", err);
-        }
-      }
-      function populateDateDropdowns() {
-        const now = new Date();
-        const ySel = document.getElementById("qYear"),
-          mSel = document.getElementById("qMonth"),
-          dSel = document.getElementById("qDay");
-        if (!ySel || !mSel || !dSel) return;
-        const y0 = now.getFullYear() - 3,
-          y1 = now.getFullYear() + 3;
-        ySel.innerHTML = "";
-        for (let y = y0; y <= y1; y++) {
-          const o = document.createElement("option");
-          o.value = y;
-          o.textContent = y;
-          ySel.appendChild(o);
-        }
-        ySel.value = now.getFullYear();
-        const monthNames = [
-          "01",
-          "02",
-          "03",
-          "04",
-          "05",
-          "06",
-          "07",
-          "08",
-          "09",
-          "10",
-          "11",
-          "12",
-        ];
-        mSel.innerHTML = "";
-        for (let i = 1; i <= 12; i++) {
-          const o = document.createElement("option");
-          o.value = i;
-          o.textContent = monthNames[i - 1];
-          mSel.appendChild(o);
-        }
-        mSel.value = now.getMonth() + 1;
-        dSel.innerHTML = "";
-        for (let d = 1; d <= 31; d++) {
-          const o = document.createElement("option");
-          o.value = d;
-          o.textContent = String(d).padStart(2, "0");
-          dSel.appendChild(o);
-        }
-        dSel.value = now.getDate();
-      }
-      function getBrand() {
-        const v = (id) => (document.getElementById(id)?.value || "").trim();
-        const dd = String(
-          document.getElementById("qDay")?.value || "01"
-        ).padStart(2, "0");
-        const mm = String(
-          document.getElementById("qMonth")?.value || "01"
-        ).padStart(2, "0");
-        const yy = String(
-          document.getElementById("qYear")?.value || new Date().getFullYear()
-        );
-        return {
-          brandName: v("brandName"),
-          brandPhone: v("brandPhone"),
-          brandEmail: v("brandEmail"),
-          brandAddr: v("brandAddr"),
-          clientName: v("clientName"),
-          clientMobile: v("clientMobile"),
-          quoteDateDMY: dd + "/" + mm + "/" + yy,
-        };
-      }
-      function buildPrintDoc() {
-        // Handle background logo
-        const logoContainer = document.getElementById("printBackgroundLogo");
-        const savedLogo = localStorage.getItem("brandLogo");
-        if (savedLogo) {
-          logoContainer.style.backgroundImage = `url(${savedLogo})`;
-        } else {
-          logoContainer.style.backgroundImage = "none";
-        }
-
-        const B = getBrand();
-        const row = currentRow;
-        const rowLabel = ROW_LABELS[row] || "Row " + row;
-        const IN = getIN();
-        const OUT = computeOutputs(IN);
-        const wrap = document.getElementById("printWrap");
-        wrap.innerHTML = "";
-        const head = document.createElement("div");
-        head.className = "print-header";
-        const left = document.createElement("div");
-        left.className = "print-brand";
-        left.innerHTML =
-          "<h1>" +
-          (B.brandName || "") +
-          "</h1>" +
-          (B.brandPhone
-            ? "<div class='print-meta'><b>Mobile:</b> " +
-              B.brandPhone +
-              "</div>"
-            : "") +
-          (B.brandAddr
-            ? "<div class='print-meta'>" + B.brandAddr + "</div>"
-            : "") +
-          (B.brandEmail
-            ? "<div class='print-meta'>" + B.brandEmail + "</div>"
-            : "");
-        const right = document.createElement("div");
-        right.className = "print-meta";
-        right.innerHTML =
-          "<div><b>Date:</b> " +
-          (B.quoteDateDMY || "") +
-          "</div>" +
-          (B.clientName
-            ? "<div><b>Client:</b> " + B.clientName + "</div>"
-            : "") +
-          (B.clientMobile
-            ? "<div><b>Client Mobile:</b> " + B.clientMobile + "</div>"
-            : "");
-        head.appendChild(left);
-        head.appendChild(right);
-        wrap.appendChild(head);
-        const title = document.createElement("div");
-        title.className = "print-title";
-        title.textContent = "QUOTATION";
-        wrap.appendChild(title);
-        const subt = document.createElement("div");
-        subt.className = "print-meta";
-        subt.innerHTML = "<b>Product Template:</b> " + rowLabel;
-        wrap.appendChild(subt);
-        const t1 = document.createElement("table");
-        const h1 = document.createElement("thead");
-        h1.innerHTML = "<tr><th colspan='2'>Specifications</th></tr>";
-        t1.appendChild(h1);
-        const b1 = document.createElement("tbody");
-        ["B", "C", "D", "E", "F", "G"].forEach((c) => {
-          const tr = document.createElement("tr");
-          const k = document.createElement("td");
-          k.textContent = INPUT_HEADERS[c] || c;
-          const v = document.createElement("td");
-          v.textContent = fmtDec(IN[c], 2);
-          tr.appendChild(k);
-          tr.appendChild(v);
-          b1.appendChild(tr);
-        });
-        t1.appendChild(b1);
-        wrap.appendChild(t1);
-        const tot = document.createElement("div");
-        tot.className = "total-box";
-        tot.innerHTML =
-          "<div class='total-line'><div>Final Quotation</div><div>" +
-          inr(OUT.AA, OUTPUT_DECIMALS["AA"] ?? 0) +
-          "</div></div>";
-        wrap.appendChild(tot);
-      }
-      
-    function handlePDF(){
-      buildPrintDoc();
-      const pa = document.getElementById('printArea');
-      if (!pa){ window.print(); return; }
-
-      // Move print area to <body> so no hidden parent affects it
-      const origParent = pa.parentNode;
-      const placeholder = document.createComment('print-placeholder');
-      origParent.replaceChild(placeholder, pa);
-      document.body.appendChild(pa);
-
-      // Ensure layout/reflow before printing (especially for iOS/Android)
-      void pa.offsetHeight;
-
-      const cleanup = () => {
-        try{
-          document.body.removeChild(pa);
-          origParent.insertBefore(pa, placeholder);
-          origParent.removeChild(placeholder);
-        }catch(e){}
-        window.onafterprint = null;
-      };
-
-      // iOS Safari often doesn't fire onafterprint; use timed fallback
-      window.onafterprint = cleanup;
-      setTimeout(() => { 
-        window.print();
-        setTimeout(cleanup, 1200); // fallback cleanup
-      }, 300); // allow time for layout
-    }
-    
-
-      // --- Safe brand defaults + persistence (non-destructive) ---
-      (function () {
-        const DEFAULTS = {
-          brandName: "JRH ENGINEERING",
-          brandPhone: "7046278859",
-          brandEmail: "jrhengineering18@gmail.com",
-          brandAddr:
-            "PLOT NO 27, SHED NO. 17, VARTEJ, Vishwakarma Industries, GIDC Chitra, Bhavnagar, Gujarat, 364004",
-          brandGST: "24AAOFJ2713M1Z6",
-        };
-        function ensureGSTField() {
-          if (document.getElementById("brandGST")) return;
-          const emailInput = document.getElementById("brandEmail");
-          if (!emailInput) return;
-          const emailDiv = emailInput.closest("div");
-          const parent = emailDiv && emailDiv.parentElement;
-          if (!parent) return;
-          const gstDiv = document.createElement("div");
-          gstDiv.style.flex = "1";
-          gstDiv.style.minWidth = "200px";
-          gstDiv.innerHTML =
-            "<label class='small'>GST</label><input id='brandGST' type='text' />";
-          parent.insertBefore(gstDiv, emailDiv.nextElementSibling);
-        }
-        function prefillBrand() {
-          ensureGSTField();
-          const set = (id, val) => {
-            const el = document.getElementById(id);
-            if (!el) return;
-            if (!el.value) el.value = val;
-          };
-          Object.entries(DEFAULTS).forEach(([k, v]) => set(k, v));
-        }
-        function saveBrand() {
-          const ids = [
-            "brandName",
-            "brandPhone",
-            "brandEmail",
-            "brandAddr",
-            "brandGST",
-          ];
-          const data = {};
-          ids.forEach((id) => {
-            const el = document.getElementById(id);
-            if (el) data[id] = el.value || "";
-          });
-          try {
-            localStorage.setItem("brandDefaults", JSON.stringify(data));
-          } catch (e) {}
-        }
-        function loadBrand() {
-          try {
-            const raw = localStorage.getItem("brandDefaults");
-            if (!raw) return;
-            const data = JSON.parse(raw);
-            Object.keys(data).forEach((id) => {
-              if (id === "clientName" || id === "clientMobile") return;
-              const el = document.getElementById(id);
-              if (el && data[id]) el.value = data[id];
-            });
-            const cn = document.getElementById("clientName");
-            if (cn) cn.value = "";
-            const cm = document.getElementById("clientMobile");
-            if (cm) cm.value = "";
-          } catch (e) {}
-        }
-
-        document.addEventListener("DOMContentLoaded", function () {
-          prefillBrand();
-          loadBrand();
-          loadLogo();
-
-          var bn = document.getElementById("brandName");
-          if (bn && (!bn.value || bn.value === "Your Brand")) {
-            bn.value = "JRH ENGINEERING";
-          }
-
-          saveBrand();
-
-          [
-            "brandName",
-            "brandPhone",
-            "brandEmail",
-            "brandAddr",
-            "brandGST",
-          ].forEach((id) => {
-            const el = document.getElementById(id);
-            if (el) el.addEventListener("input", saveBrand);
-          });
-        });
-
-        const oldBuild = window.buildPrintDoc;
-        window.buildPrintDoc = function () {
-          if (typeof ensureGSTField === "function") ensureGSTField();
-          oldBuild && oldBuild();
-          try {
-            const left = document.querySelector("#printWrap .print-brand");
-            if (left && !left.querySelector(".brand-gst")) {
-              const gst =
-                (document.getElementById("brandGST") || {}).value || "";
-              if (gst) {
-                const div = document.createElement("div");
-                div.className = "print-meta brand-gst";
-                div.innerHTML = "<b>GST:</b> " + gst;
-                left.appendChild(div);
-              }
-            }
-          } catch (e) {}
-        };
-      })();
-      // --- END: UNCHANGED CORE LOGIC ---
-
-      // --- NEW: Modal Control Logic ---
-      document.addEventListener("DOMContentLoaded", () => {
-        const shareModal = document.getElementById("shareModal");
-        const openModalBtn = document.getElementById("openShareModalBtn");
-        const closeModalBtn = document.querySelector(".modal-close-btn");
-        const printPdfBtn = document.getElementById("btnPDF");
-        const logoUpload = document.getElementById("logoUpload");
-
-        if (openModalBtn) {
-          openModalBtn.addEventListener("click", () => {
-            shareModal.style.display = "flex";
-          });
-        }
-        if (closeModalBtn) {
-          closeModalBtn.addEventListener("click", () => {
-            shareModal.style.display = "none";
-          });
-        }
-        if (printPdfBtn) {
-          printPdfBtn.addEventListener("click", handlePDF);
-        }
-        if (logoUpload) {
-          logoUpload.addEventListener("change", handleLogoUpload);
-        }
-
-        window.addEventListener("click", (event) => {
-          if (event.target == shareModal) {
-            shareModal.style.display = "none";
-          }
-        });
-
-        populateDateDropdowns();
-      });
-
-      // --- Initial calculator setup ---
-      (function init() {
-        populateDropdown();
-        renderInputs();
-        recalc();
-      })();
-  
-    // === Multi-product config ===
-    const PRODUCTS_CONFIG = {
-      "ASA SORF": {
-        INPUT_COLS: [
-        "B",
-        "C",
-        "D",
-        "E",
-        "F",
-        "G",
-        "H",
-        "S",
-        "T",
-        "U",
-        "Y",
-      ],
-        INPUT_HEADERS: {
-        B: "OD OF FLANGE (mm)",
-        C: "ID (BORE) OF FLANGE (mm)",
-        D: "FINAL THICKNESS (mm)",
-        E: "NOS. OF HOLES",
-        F: "HOLE DIA. (mm)",
-        G: "R.F DIA",
-        H: "FACE MACHINIG (1/2)",
-        S: "PROFILE CUTTING RATE",
-        T: "ID RATE",
-        U: "CHIPS RATE",
-        Y: "TOTAL M/C RATE",
-      },
-        ROWS: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
-        ROW_LABELS: {
-        8: "1/2''",
-        9: "3/4''",
-        10: "1''",
-        11: '1.25"',
-        12: "1.5''",
-        13: '2"',
-        14: "2.5''",
-        15: "3''",
-        16: "4''",
-        17: "5''",
-        18: "6''",
-        19: "8''",
-        20: "10''",
-        21: '12"',
-      },
-        DEFAULTS: {
-        8: {
-          B: 89.0,
-          C: 22.5,
-          D: 11.7,
-          E: 4.0,
-          F: 16.0,
-          G: 35.0,
-          H: 1.5,
-          S: 56.0,
-          T: 35.0,
-          U: 30.0,
-          Y: 12.0,
-        },
-        9: {
-          B: 98.5,
-          C: 28.5,
-          D: 12.7,
-          E: 4.0,
-          F: 16.0,
-          G: 43.0,
-          H: 1.5,
-          S: 56.0,
-          T: 35.0,
-          U: 30.0,
-          Y: 12.0,
-        },
-        10: {
-          B: 108.0,
-          C: 35.5,
-          D: 14.5,
-          E: 4.0,
-          F: 16.0,
-          G: 51.0,
-          H: 1.5,
-          S: 55.0,
-          T: 35.0,
-          U: 30.0,
-          Y: 12.0,
-        },
-        11: {
-          B: 117.5,
-          C: 44.0,
-          D: 16.0,
-          E: 4.0,
-          F: 16.0,
-          G: 63.5,
-          H: 1.5,
-          S: 55.0,
-          T: 35.0,
-          U: 30.0,
-          Y: 12.0,
-        },
-        12: {
-          B: 127.0,
-          C: 50.5,
-          D: 17.5,
-          E: 4.0,
-          F: 16.0,
-          G: 73.0,
-          H: 1.5,
-          S: 62.0,
-          T: 35.0,
-          U: 30.0,
-          Y: 13.0,
-        },
-        13: {
-          B: 152.4,
-          C: 62.0,
-          D: 19.1,
-          E: 4.0,
-          F: 19.0,
-          G: 92.0,
-          H: 1.5,
-          S: 60.5,
-          T: 35.0,
-          U: 30.0,
-          Y: 12.0,
-        },
-        14: {
-          B: 177.8,
-          C: 78.0,
-          D: 22.5,
-          E: 4.0,
-          F: 19.0,
-          G: 104.5,
-          H: 1.5,
-          S: 63.0,
-          T: 35.0,
-          U: 30.0,
-          Y: 18.0,
-        },
-        15: {
-          B: 190.5,
-          C: 91.5,
-          D: 23.8,
-          E: 4.0,
-          F: 19.0,
-          G: 127.0,
-          H: 1.5,
-          S: 59.5,
-          T: 38.0,
-          U: 30.0,
-          Y: 18.0,
-        },
-        16: {
-          B: 228.5,
-          C: 116.0,
-          D: 23.8,
-          E: 8.0,
-          F: 19.0,
-          G: 157.0,
-          H: 1.5,
-          S: 59.5,
-          T: 42.0,
-          U: 30.0,
-          Y: 25.0,
-        },
-        17: {
-          B: 254.0,
-          C: 144.0,
-          D: 23.8,
-          E: 8.0,
-          F: 22.0,
-          G: 186.0,
-          H: 1.5,
-          S: 68.0,
-          T: 50.0,
-          U: 30.0,
-          Y: 30.0,
-        },
-        18: {
-          B: 279.4,
-          C: 171.5,
-          D: 25.4,
-          E: 8.0,
-          F: 22.0,
-          G: 216.0,
-          H: 1.5,
-          S: 61.5,
-          T: 50.0,
-          U: 30.0,
-          Y: 35.0,
-        },
-        19: {
-          B: 343.0,
-          C: 222.0,
-          D: 28.6,
-          E: 8.0,
-          F: 22.0,
-          G: 270.0,
-          H: 2.0,
-          S: 64.5,
-          T: 50.0,
-          U: 30.0,
-          Y: 45.0,
-        },
-        20: {
-          B: 406.4,
-          C: 276.0,
-          D: 30.2,
-          E: 12.0,
-          F: 25.4,
-          G: 324.0,
-          H: 2.0,
-          S: 68.5,
-          T: 50.0,
-          U: 30.0,
-          Y: 55.0,
-        },
-        21: {
-          B: 482.6,
-          C: 327.0,
-          D: 31.8,
-          E: 12.0,
-          F: 25.4,
-          G: 381.0,
-          H: 2.0,
-          S: 68.5,
-          T: 50.0,
-          U: 30.0,
-          Y: 65.0,
-        },
-      },
-        OUTPUT_ORDER: [
-        "I",
-        "J",
-        "K",
-        "L",
-        "M",
-        "N",
-        "O",
-        "P",
-        "Q",
-        "W",
-        "R",
-        "X",
-        "V",
-        "Z",
-        "AA",
-        "AB",
-      ],
-        OUTPUT_LABELS: {
-        I: "OD OF CIRCLE (mm)",
-        J: "THICKNESS OF CIRCLE (mm)",
-        K: "CIRCLE WEIGHT (KG)",
-        L: "ID CHIPS WEIGHT(KG)",
-        M: "FACING CHIPS WEIGHT (KG)",
-        N: "OD CHIPS WEIGHT (KG)",
-        O: "HOLE CHIPS WEIGHT (KG)",
-        P: "R.F CHIPS WEIGHT (KG)",
-        Q: "TOTAL CHIPS WEIGHT    (KG)",
-        W: "ID RATE",
-        R: "ID WEIGHT",
-        X: "RAW CIRCLE RATE",
-        V: "SCRAP CHIPS RATE",
-        Z: "MFG RATE",
-        AA: "SELLING ",
-        AB: "WEIGHT OF FLANGE",
-      }
-      },
-      "TABLE-D": {
-        INPUT_COLS: ["B", "C", "D", "E", "F", "H", "S", "T", "U", "Y"],
-        INPUT_HEADERS: {"B": "OD OF FLANGE (mm)", "C": "ID (BORE) OF FLANGE (mm)", "D": "FINAL THICKNESS (mm)", "E": "NOS. OF HOLES", "F": "HOLE DIA. (mm)", "H": "FACE MACHINIG (1/2)", "S": "PROFILE CUTTING RATE", "T": "ID SCRAP RATE", "U": "CHIPS RATE", "Y": "TOTAL M/C RATE"},
-        ROWS: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
-        ROW_LABELS: {"8": "1/2''", "9": "3/4''", "10": "1''", "11": "1.25''", "12": "1.5''", "13": "2\"", "14": "2.5''", "15": "3''", "16": "4''", "17": "5''", "18": "6''", "19": "8''", "20": "10''", "21": 12.0},
-        DEFAULTS: {"8": {"B": 95.0, "C": 22.5, "D": 5.0, "E": 4.0, "F": 14.0, "H": 1.5, "S": 58.5, "T": 33.0, "U": 33.0, "Y": 12.0}, "9": {"B": 101.0, "C": 28.5, "D": 5.0, "E": 4.0, "F": 14.0, "H": 1.5, "S": 58.5, "T": 33.0, "U": 33.0, "Y": 12.0}, "10": {"B": 115.0, "C": 36.0, "D": 10.0, "E": 0.0, "F": 0.0, "H": 2.0, "S": 58.5, "T": 35.0, "U": 31.0, "Y": 15.0}, "11": {"B": 120.5, "C": 44.0, "D": 6.5, "E": 4.0, "F": 14.0, "H": 1.5, "S": 58.5, "T": 35.0, "U": 33.0, "Y": 12.0}, "12": {"B": 133.4, "C": 50.0, "D": 8.0, "E": 4.0, "F": 14.0, "H": 1.5, "S": 58.5, "T": 35.0, "U": 36.0, "Y": 12.0}, "13": {"B": 150.0, "C": 51.0, "D": 16.0, "E": 0.0, "F": 0.0, "H": 1.5, "S": 58.5, "T": 35.0, "U": 31.0, "Y": 30.0}, "14": {"B": 165.1, "C": 78.0, "D": 10.0, "E": 4.0, "F": 17.5, "H": 1.5, "S": 58.5, "T": 35.0, "U": 31.0, "Y": 14.0}, "15": {"B": 185.0, "C": 80.0, "D": 16.0, "E": 0.0, "F": 0.0, "H": 2.0, "S": 58.5, "T": 35.0, "U": 31.0, "Y": 25.0}, "16": {"B": 215.0, "C": 100.0, "D": 16.0, "E": 0.0, "F": 0.0, "H": 2.0, "S": 58.5, "T": 45.0, "U": 31.0, "Y": 40.0}, "17": {"B": 254.0, "C": 144.0, "D": 12.7, "E": 8.0, "F": 17.5, "H": 1.5, "S": 59.0, "T": 50.0, "U": 34.0, "Y": 20.0}, "18": {"B": 280.0, "C": 155.0, "D": 20.0, "E": 0.0, "F": 0.0, "H": 2.0, "S": 59.0, "T": 50.0, "U": 31.0, "Y": 75.0}, "19": {"B": 320.0, "C": 150.0, "D": 16.0, "E": 0.0, "F": 0.0, "H": 2.0, "S": 59.0, "T": 50.0, "U": 31.0, "Y": 145.0}, "20": {"B": 406.4, "C": 276.0, "D": 16.0, "E": 8.0, "F": 22.0, "H": 1.0, "S": 60.5, "T": 60.5, "U": 36.0, "Y": 37.0}, "21": {"B": 457.2, "C": 326.0, "D": 16.0, "E": 12.0, "F": 22.0, "H": 1.5, "S": 60.5, "T": 55.0, "U": 31.0, "Y": 40.0}},
-        OUTPUT_ORDER: ["I", "J", "K", "L", "M", "N", "O", "Q", "R", "V", "W", "X", "Z", "AA", "AB"],
-        OUTPUT_LABELS: {"I": "OD OF CIRCLE (mm)", "J": "THICKNESS OF CIRCLE (mm)", "K": "CIRCLE WEIGHT (KG)", "L": "ID CHIPS WEIGHT(KG)", "M": "FACING CHIPS WEIGHT (KG)", "N": "OD CHIPS WEIGHT (KG)", "O": "HOLE CHIPS WEIGHT (KG)", "Q": "TOTAL CHIPS WEIGHT    (KG)", "R": "ID WEIGHT", "V": "SCRAP CHIPS RATE", "W": "ID RATE", "X": "RAW CIRCLE RATE", "Z": "MFG RATE", "AA": "FINAL RATE", "AB": "WEIGHT OF FLANGE"}
-      }
-    };
-
-    // Current product key
-    let CURRENT_PRODUCT = "ASA SORF";
-
-
-    function initProducts(){
-      const sel = document.getElementById('productPick');
-      if (!sel) return;
-      sel.innerHTML = '';
-      Object.keys(PRODUCTS_CONFIG).forEach(name=>{
-        const o = document.createElement('option'); o.value=name; o.textContent=name; sel.appendChild(o);
-      });
-      sel.value = CURRENT_PRODUCT;
-      sel.addEventListener('change', ()=>{
-        CURRENT_PRODUCT = sel.value;
-        populateDropdown();
-        renderInputs();
-        recalc();
-      });
-    }
-    function PC(){ return PRODUCTS_CONFIG[CURRENT_PRODUCT]; }
-
-    // Replace data flows with product-aware versions
-    const __orig_populateDropdown = populateDropdown;
-    populateDropdown = function(){
-      const sel = document.getElementById('rowPick'); sel.innerHTML='';
-      PC().ROWS.forEach(r=>{ const o=document.createElement('option'); o.value=r; o.textContent=PC().ROW_LABELS[r]; sel.appendChild(o); });
-      for (const r of PC().ROWS){ if (String(PC().ROW_LABELS[r]).includes('12')){ sel.value=r; currentRow=r; break; } }
-      sel.addEventListener('change', ()=>{ currentRow=parseInt(sel.value,10); renderInputs(); recalc(); });
-    };
-    const __orig_renderInputs = renderInputs;
-    renderInputs = function(){
-      const box=document.getElementById('inputs'); box.innerHTML='';
-      const d=PC().DEFAULTS[currentRow]||{};
-      PC().INPUT_COLS.forEach(c=>{
-        const w=document.createElement('div');
-        const lab=document.createElement('label'); lab.className='small'; lab.textContent=PC().INPUT_HEADERS[c]||c;
-        const inp=document.createElement('input'); inp.type='number'; inp.step='any'; inp.id='IN_'+c; inp.value=(d[c]==null?'':d[c]);
-        inp.addEventListener('input', recalc);
-        w.appendChild(lab); w.appendChild(inp); box.appendChild(w);
-      });
-    };
-    const __orig_getIN = getIN;
-    getIN = function(){
-      const o={}; PC().INPUT_COLS.forEach(c=>{ const el=document.getElementById('IN_'+c); o[c]=n(el&&el.value); }); return o;
-    };
-    const __orig_recalc = recalc;
-    recalc = function(){
-      const IN = getIN(); const O = computeOutputs(IN);
-      document.getElementById('finalAmt').textContent = inr(O.AA, OUTPUT_DECIMALS['AA'] ?? 0);
-      const grid=document.getElementById('results'); grid.innerHTML='';
-      // Use product-specific output order/labels but same computed values
-      (PC().OUTPUT_ORDER||[]).forEach(col=>{
-        const wrap=document.createElement('div'); wrap.className='pair';
-        const k=document.createElement('div'); k.className='k'; k.textContent = outLabelDynamic(col);
-        const v=document.createElement('div'); v.className='v'; v.textContent = fmtDec(O[col], OUTPUT_DECIMALS[col] ?? 2);
-        wrap.appendChild(k); wrap.appendChild(v); grid.appendChild(wrap);
-      });
-    };
-    function outLabelDynamic(col){
-      const raw = (PC().OUTPUT_LABELS&&PC().OUTPUT_LABELS[col]) || col;
-      const inputLabels = Object.values(PC().INPUT_HEADERS||{}).map(s=>String(s||'').trim().toLowerCase());
-      return inputLabels.includes(String(raw).trim().toLowerCase()) ? (raw + " (calc)") : raw;
-    }
-
-
-    // Safety: ensure Product dropdown is populated after all scripts load
-    window.addEventListener('load', () => {
-      try {
-        if (typeof initProducts === 'function') {
-          const sel = document.getElementById('productPick');
-          if (sel && (!sel.options || sel.options.length < 1)) {
-            initProducts();
-          }
-        }
-      } catch (e) {}
-    });
-
-
-    function getPDFSpecCols(){
-      const product = (document.getElementById('productPick')||{}).value || 'ASA SORF';
-      if (product === 'TABLE-D') return ['B','C','D','E','F']; // no R.F DIA (G) for Table-D
-      return ['B','C','D','E','F','G'];
-    }
-
-
-    // === Product-specific calculators ===
-    // Preserve original ASA calculator
-    const computeOutputs_ASA = computeOutputs;
-
-    // Dedicated TABLE-D calculator (no shared ASA math)
-    function computeOutputs_TABLED(IN){
-      const B = n(IN.B), C = n(IN.C), D = n(IN.D), E = n(IN.E), F = n(IN.F),
-            H = n(IN.H), S = n(IN.S), T = n(IN.T), U = n(IN.U), Y = n(IN.Y);
-      const I = B + 4;
-      const J = D + H;
-      const K = ((1.02 * PI * I * I * J) / 4) * DENS;
-      const L = ((PI * J * (C + 13) * (C + 13)) / 4) * DENS - ((PI * J * C * C) / 4) * DENS; // ID chips (Table-D)
-      const M = ((PI * H * B * B) / 4) * DENS - ((PI * H * C * C) / 4) * DENS;              // facing chips
-      const N = ((PI * D * I * I) / 4) * DENS - ((PI * D * B * B) / 4) * DENS;              // OD chips
-      const O = ((PI * F * F * D) / 4) * DENS * E;                                          // hole chips
-      const P = 0;                                                                          // Table-D P is blank
-      const Q = L + M + N + O + P;                                                          // total chips
-      const R = ((PI * J * (C - 14) * (C - 14)) / 4) * DENS;                                // ID weight
-      const V = Q * U * 0.95;                                                               // scrap chips rate
-      const W = R * T * 0.98;                                                               // ID rate (calc)
-      const X = K * S;                                                                      // raw circle rate
-      const Z = X + Y - W - V;                                                              // mfg rate
-      const AA = Z * 1.1;                                                                   // selling (10%)
-      const AB = K - R - Q;                                                                 // weight of flange
-
-      return { I, J, K, L, M, N, O, P, Q, R, V, W, X, Z, AA, AB };
-    }
-
-    // Dispatch by CURRENT_PRODUCT
-    computeOutputs = function(IN){
-      if (typeof CURRENT_PRODUCT !== 'undefined' && CURRENT_PRODUCT === 'TABLE-D') {
-        return computeOutputs_TABLED(IN);
-      }
-      return computeOutputs_ASA(IN);
-    };
-
-  </script>
+    <!-- External JavaScript files -->
+    <script src="product_asasorf.js"></script>
+    <script src="product_tabled.js"></script>
+    <script src="product_tablee.js"></script>
+    <script src="product_tablef.js"></script>
+    <script src="product_asasoff.js"></script>
+    <script src="product_is.js"></script>
+    <script src="product_ljff_cl150.js"></script>
+    <script src="product_asacl300sorf.js"></script>
+    <script src="app.js"></script>
   </body>
 </html>
