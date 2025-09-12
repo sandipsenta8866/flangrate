@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Flange Rate Calculator - jsPDF Version</title>
+    <title>Flange Rate Calculator</title>
     <!-- jsPDF and html2canvas Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -17,6 +17,7 @@
         --shadow: 0 8px 26px rgba(15, 23, 42, 0.08);
         --primary: #2563eb;
         --primary-weak: #eff6ff;
+        --danger: #ef4444;
       }
       * {
         box-sizing: border-box;
@@ -54,6 +55,7 @@
       select,
       input[type="number"],
       input[type="text"],
+      input[type="password"],
       textarea,
       input[type="file"] {
         width: 100%;
@@ -140,6 +142,14 @@
       }
       .btn:active {
         transform: translateY(1px);
+      }
+      .btn-primary {
+        background-color: var(--primary);
+        border-color: var(--primary);
+      }
+      .btn-danger {
+        background-color: var(--danger);
+        border-color: var(--danger);
       }
       #printArea {
         position: absolute;
@@ -275,15 +285,57 @@
           transform: scale(1);
         }
       }
+
+      /* --- AUTHENTICATION STYLES --- */
+      #auth-container {
+        background: #fff;
+        border-radius: 12px;
+        padding: 8px 12px;
+        margin-bottom: 20px;
+        text-align: center;
+        font-size: 14px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 12px;
+      }
+      #auth-modal .modal-content {
+        max-width: 400px;
+      }
+      #auth-modal .form-toggle {
+        text-align: center;
+        margin-top: 16px;
+        font-size: 14px;
+      }
+      #auth-modal .form-toggle a {
+        color: var(--primary);
+        text-decoration: underline;
+        cursor: pointer;
+      }
+      #auth-error {
+        color: var(--danger);
+        font-size: 14px;
+        text-align: center;
+        margin-top: 12px;
+        min-height: 1.2em;
+      }
     </style>
   </head>
   <body>
+    <!-- ======== AUTHENTICATION UI ======== -->
     <div class="wrap">
+      <div id="auth-container">
+        <!-- This will be dynamically filled by firebase-auth.js -->
+      </div>
+    </div>
+    <!-- ===================================== -->
+
+    <div class="wrap" id="main-app-content">
       <div class="card block">
         <label class="small">Select Product</label
         ><select id="productPick"></select>
       </div>
-      <div class="card block">
+      <div class="card block" style="margin-top: 14px">
         <label class="small">Select Product Template</label>
         <select id="rowPick"></select>
         <div class="quote">
@@ -332,7 +384,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h2>Quotation Details</h2>
-          <span class="modal-close-btn">&times;</span>
+          <span class="modal-close-btn" id="close-share-modal">&times;</span>
         </div>
         <div class="modal-body">
           <div class="row" style="gap: 12px">
@@ -423,6 +475,577 @@
       </div>
     </div>
 
+    <!-- AUTHENTICATION MODAL -->
+    <div id="auth-modal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="auth-title">Login</h2>
+          <span class="modal-close-btn" id="close-auth-modal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <form id="auth-form">
+            <div>
+              <label for="auth-email" class="small">Email</label>
+              <input type="email" id="auth-email" required />
+            </div>
+            <div style="margin-top: 12px">
+              <label for="auth-password" class="small">Password</label>
+              <input type="password" id="auth-password" required />
+            </div>
+            <div id="auth-error"></div>
+            <div style="margin-top: 16px">
+              <button
+                type="submit"
+                id="auth-submit-btn"
+                class="btn btn-primary"
+                style="width: 100%"
+              >
+                Login
+              </button>
+            </div>
+          </form>
+          <div class="form-toggle">
+            <span id="auth-toggle-text"
+              >Don't have an account? <a id="auth-toggle-link">Sign Up</a></span
+            >
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Firebase SDK Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+
+    <!-- Your Application Scripts (Order is important!) -->
+    <script src="product_asasorf.js"></script>
+    <script src="product_tabled.js"></script>
+    <script src="product_tablee.js"></script>
+    <script src="product_tablef.js"></script>
+    <script src="firebase-auth.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Flange Rate Calculator</title>
+    <!-- jsPDF and html2canvas Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+      :root {
+        --bg: #f5f7fb;
+        --ink: #0f172a;
+        --muted: #6b7280;
+        --card: #ffffff;
+        --border: #e5e7eb;
+        --shadow: 0 8px 26px rgba(15, 23, 42, 0.08);
+        --primary: #2563eb;
+        --primary-weak: #eff6ff;
+        --danger: #ef4444;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: Inter, system-ui, Segoe UI, Roboto, Arial, sans-serif;
+      }
+      .wrap {
+        max-width: 980px;
+        margin: 24px auto;
+        padding: 0 14px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        box-shadow: var(--shadow);
+      }
+      .block {
+        padding: 14px 16px;
+      }
+      label.small {
+        font-size: 12px;
+        color: var(--muted);
+        display: block;
+        margin-bottom: 6px;
+      }
+      select,
+      input[type="number"],
+      input[type="text"],
+      input[type="password"],
+      textarea,
+      input[type="file"] {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: #fff;
+        color: #0f172a;
+        font-size: 14px;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+      }
+      .grid-3 {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      @media (min-width: 720px) {
+        .grid-3 {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+      .inputs-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      @media (min-width: 720px) {
+        .inputs-grid {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+      .pair {
+        display: grid;
+        gap: 4px;
+        padding: 10px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: #fff;
+      }
+      .pair .k {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .pair .v {
+        font-weight: 700;
+        letter-spacing: 0.2px;
+      }
+      .quote {
+        text-align: center;
+        padding: 18px;
+        border-radius: 12px;
+        background: var(--primary-weak);
+        border: 1px dashed #bfdbfe;
+        margin: 14px 0;
+      }
+      .quote h2 {
+        margin: 0 0 4px;
+        font-size: 16px;
+        font-weight: 700;
+        color: #1f2937;
+      }
+      .quote .amt {
+        font-size: 28px;
+        font-weight: 800;
+        color: #1d4ed8;
+      }
+      .section-title {
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--border);
+        font-weight: 700;
+      }
+      .btn {
+        appearance: none;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: #0f172a;
+        color: #fff;
+        padding: 10px 14px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .btn:active {
+        transform: translateY(1px);
+      }
+      .btn-primary {
+        background-color: var(--primary);
+        border-color: var(--primary);
+      }
+      .btn-danger {
+        background-color: var(--danger);
+        border-color: var(--danger);
+      }
+      #printArea {
+        position: absolute;
+        left: -9999px;
+        top: -9999px;
+        background: #fff;
+      }
+      .print-wrap {
+        width: 800px;
+        padding: 15mm;
+        font-family: Inter, system-ui, Segoe UI, Roboto, Arial, sans-serif;
+        color: #111827;
+        position: relative;
+        z-index: 2;
+      }
+      .print-background-logo {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 80%;
+        height: 80%;
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: contain;
+        opacity: 0.08;
+        z-index: 1;
+      }
+      .print-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+      }
+      .print-brand {
+        max-width: 65%;
+      }
+      .print-brand h1 {
+        margin: 0;
+        font-size: 22px;
+      }
+      .print-meta {
+        font-size: 12px;
+        color: #374151;
+      }
+      .print-title {
+        font-size: 18px;
+        font-weight: 800;
+        text-align: center;
+        margin: 10px 0 14px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+      th,
+      td {
+        border: 1px solid #e5e7eb;
+        padding: 6px;
+        text-align: right;
+      }
+      th:first-child,
+      td:first-child {
+        text-align: left;
+      }
+      .total-box {
+        margin-top: 12px;
+        padding: 10px;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+      }
+      .total-line {
+        display: flex;
+        justify-content: space-between;
+        font-size: 16px;
+        font-weight: 800;
+      }
+      .modal-overlay {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(15, 23, 42, 0.7);
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+      }
+      .modal-content {
+        background-color: var(--bg);
+        margin: auto;
+        border-radius: 16px;
+        max-width: 900px;
+        width: 100%;
+        animation: fadeIn 0.3s;
+      }
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--border);
+      }
+      .modal-header h2 {
+        margin: 0;
+        font-size: 18px;
+      }
+      .modal-close-btn {
+        color: var(--muted);
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+        line-height: 1;
+      }
+      .modal-close-btn:hover,
+      .modal-close-btn:focus {
+        color: var(--ink);
+      }
+      .modal-body {
+        padding: 20px;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: scale(0.95);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      /* --- AUTHENTICATION STYLES --- */
+      #auth-container {
+        background: #fff;
+        border-radius: 12px;
+        padding: 8px 12px;
+        margin-bottom: 20px;
+        text-align: center;
+        font-size: 14px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 12px;
+      }
+      #auth-modal .modal-content {
+        max-width: 400px;
+      }
+      #auth-modal .form-toggle {
+        text-align: center;
+        margin-top: 16px;
+        font-size: 14px;
+      }
+      #auth-modal .form-toggle a {
+        color: var(--primary);
+        text-decoration: underline;
+        cursor: pointer;
+      }
+      #auth-error {
+        color: var(--danger);
+        font-size: 14px;
+        text-align: center;
+        margin-top: 12px;
+        min-height: 1.2em;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ======== AUTHENTICATION UI ======== -->
+    <div class="wrap">
+      <div id="auth-container">
+        <!-- This will be dynamically filled by firebase-auth.js -->
+      </div>
+    </div>
+    <!-- ===================================== -->
+
+    <div class="wrap" id="main-app-content">
+      <div class="card block">
+        <label class="small">Select Product</label
+        ><select id="productPick"></select>
+      </div>
+      <div class="card block" style="margin-top: 14px">
+        <label class="small">Select Product Template</label>
+        <select id="rowPick"></select>
+        <div class="quote">
+          <h2>Final Quotation</h2>
+          <div class="amt" id="finalAmt">₹0.00</div>
+        </div>
+      </div>
+      <div class="card" style="margin-top: 14px">
+        <div class="section-title">Client Specifications & Rates</div>
+        <div class="block">
+          <div class="inputs-grid" id="inputs"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top: 14px">
+        <div class="section-title">Calculated Results</div>
+        <div class="block">
+          <div class="grid-3" id="results"></div>
+        </div>
+      </div>
+      <div
+        class="card"
+        style="margin-top: 24px; padding: 16px; text-align: center"
+      >
+        <button
+          id="openShareModalBtn"
+          class="btn"
+          style="
+            width: 100%;
+            max-width: 300px;
+            padding: 12px;
+            font-size: 16px;
+            background: var(--primary);
+          "
+        >
+          Generate & Share PDF
+        </button>
+      </div>
+      <div id="printArea">
+        <div id="printBackgroundLogo" class="print-background-logo"></div>
+        <div class="print-wrap" id="printWrap"></div>
+      </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div id="shareModal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Quotation Details</h2>
+          <span class="modal-close-btn" id="close-share-modal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="row" style="gap: 12px">
+            <div style="flex: 1; min-width: 200px">
+              <label class="small">Brand Name</label>
+              <input id="brandName" type="text" value="JRH ENGINEERING" />
+            </div>
+            <div style="flex: 1; min-width: 160px">
+              <label class="small">Mobile</label>
+              <input id="brandPhone" type="text" placeholder="+91-" />
+            </div>
+            <div style="flex: 1; min-width: 200px">
+              <label class="small">Email</label>
+              <input
+                id="brandEmail"
+                type="text"
+                placeholder="info@example.com"
+              />
+            </div>
+          </div>
+          <div class="row" style="margin-top: 10px; gap: 12px">
+            <div style="flex: 2; min-width: 260px">
+              <label class="small">Address</label>
+              <textarea
+                id="brandAddr"
+                placeholder="Street, City, State, PIN"
+                style="min-height: 72px"
+              ></textarea>
+            </div>
+            <div style="flex: 1; min-width: 160px">
+              <label class="small">Client Name</label>
+              <input id="clientName" type="text" placeholder="Client" />
+            </div>
+            <div style="flex: 1; min-width: 160px">
+              <label class="small">Client Mobile</label>
+              <input id="clientMobile" type="text" placeholder="+91-" />
+            </div>
+          </div>
+          <div
+            class="row"
+            style="margin-top: 10px; gap: 12px; align-items: flex-end"
+          >
+            <div style="flex: 1; min-width: 200px">
+              <label class="small">Brand Logo (Select Once)</label>
+              <input
+                id="logoUpload"
+                type="file"
+                accept="image/*"
+                style="padding: 5px"
+              />
+            </div>
+            <div style="flex: 0 0 80px">
+              <img
+                id="logoPreview"
+                src="https://placehold.co/100x100/e5e7eb/6b7280?text=Logo"
+                style="
+                  width: 80px;
+                  height: 80px;
+                  border-radius: 12px;
+                  border: 1px solid var(--border);
+                  object-fit: contain;
+                "
+              />
+            </div>
+          </div>
+          <div class="row" style="margin-top: 10px; gap: 8px">
+            <div style="flex: 1; min-width: 220px">
+              <label class="small">Quote Date</label>
+              <div class="row" style="gap: 8px">
+                <select id="qDay"></select>
+                <select id="qMonth"></select>
+                <select id="qYear"></select>
+              </div>
+            </div>
+            <div
+              style="
+                flex: 1;
+                min-width: 160px;
+                align-self: end;
+                display: flex;
+                justify-content: flex-end;
+              "
+            >
+              <button id="btnPDF" class="btn">Confirm & Download PDF</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AUTHENTICATION MODAL -->
+    <div id="auth-modal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="auth-title">Login</h2>
+          <span class="modal-close-btn" id="close-auth-modal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <form id="auth-form">
+            <div>
+              <label for="auth-email" class="small">Email</label>
+              <input type="email" id="auth-email" required />
+            </div>
+            <div style="margin-top: 12px">
+              <label for="auth-password" class="small">Password</label>
+              <input type="password" id="auth-password" required />
+            </div>
+            <div id="auth-error"></div>
+            <div style="margin-top: 16px">
+              <button
+                type="submit"
+                id="auth-submit-btn"
+                class="btn btn-primary"
+                style="width: 100%"
+              >
+                Login
+              </button>
+            </div>
+          </form>
+          <div class="form-toggle">
+            <span id="auth-toggle-text"
+              >Don't have an account? <a id="auth-toggle-link">Sign Up</a></span
+            >
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Firebase SDK Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+
     <!-- External JavaScript files -->
     <script src="product_asasorf.js"></script>
     <script src="product_tabled.js"></script>
@@ -432,6 +1055,9 @@
     <script src="product_is.js"></script>
     <script src="product_ljff_cl150.js"></script>
     <script src="product_asacl300sorf.js"></script>
+    <script src="product_pn10.js"></script>
+    <script src="product_pn6ff.js"></script>
+    <script src="firebase-auth.js"></script>
     <script src="app.js"></script>
   </body>
 </html>
