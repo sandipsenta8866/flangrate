@@ -7,7 +7,6 @@ const firebaseConfig = {
   messagingSenderId: "733249151125",
   appId: "1:733249151125:web:2b64119accce4848edfb9c",
 };
-
 // --- Firebase Initialization ---
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
@@ -69,7 +68,7 @@ auth.onAuthStateChanged((user) => {
         newConfirmBtn,
         customModalConfirm
       );
-      customModalConfirm = newConfirmBtn; // Update reference to the new button
+      customModalConfirm = newConfirmBtn;
 
       customModalConfirm.addEventListener(
         "click",
@@ -116,7 +115,7 @@ auth.onAuthStateChanged((user) => {
         "Are you sure you want to clear the form and start a new quotation? Any unsaved changes will be lost.",
         () => {
           currentQuotationId = null;
-          window.resetCalculator(); // This function is in app.js
+          window.resetCalculator();
           saveQuotationBtn.textContent = "Save This Quotation";
           newQuotationBtn.style.display = "none";
         }
@@ -133,8 +132,7 @@ auth.onAuthStateChanged((user) => {
       const calculatorState = window.getCalculatorState();
       const quotationData = {
         ...calculatorState,
-        clientName: clientName, // Ensure the latest name is saved
-        clientMobile: mainClientMobile.value.trim(),
+        clientName: clientName, // Ensure top-level clientName for sorting/display
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         userId: user.uid,
       };
@@ -157,7 +155,6 @@ auth.onAuthStateChanged((user) => {
           .add(quotationData)
           .then((docRef) => {
             showCustomAlert("Quotation saved successfully!");
-            // Automatically reset the form for the next quotation
             currentQuotationId = null;
             window.resetCalculator();
             saveQuotationBtn.textContent = "Save This Quotation";
@@ -194,11 +191,22 @@ auth.onAuthStateChanged((user) => {
                   ? window.inr(data.finalAmount, 0)
                   : `₹${data.finalAmount}`
                 : "";
+              const clientMobile = data.brandDetails?.clientMobile || "";
+              const clientNameDisplay = clientMobile
+                ? `${
+                    data.clientName || "No Client Name"
+                  } <span class="mobile-number">(${clientMobile})</span>`
+                : `${data.clientName || "No Client Name"}`;
 
               el.innerHTML = `
               <div class="quotation-item-header">
-                <span>${data.clientName || "No Client Name"}</span>
+                <span>${clientNameDisplay}</span>
                 <span>${formattedAmount}</span>
+              </div>
+              <div class="quotation-item-details">
+                <strong>${data.productKey || "N/A"}</strong> - <span>${
+                data.rowLabel || "N/A"
+              }</span>
               </div>
               <div class="quotation-item-date">${date}</div>
               <div class="quotation-item-actions">
@@ -212,7 +220,7 @@ auth.onAuthStateChanged((user) => {
                 loadQuotation(doc.id, data)
               );
               el.querySelector(".download").addEventListener("click", () =>
-                downloadQuotationAsPDF(data)
+                window.generatePDFDirectly(data)
               );
               el.querySelector(".delete").addEventListener("click", () =>
                 deleteQuotation(doc.id)
@@ -247,7 +255,7 @@ auth.onAuthStateChanged((user) => {
             .then(() => {
               showCustomAlert("Quotation deleted.");
               if (currentQuotationId === docId) {
-                newQuotationBtn.click(); // Reset the form if the deleted quote was loaded
+                newQuotationBtn.click();
               }
             })
             .catch((error) => {
@@ -256,23 +264,6 @@ auth.onAuthStateChanged((user) => {
             });
         }
       );
-    }
-
-    function downloadQuotationAsPDF(data) {
-      const tempState = window.getCalculatorState(); // Save current state
-      window.restoreCalculatorState(data);
-      document.getElementById("openShareModalBtn").click();
-      const downloadBtn = document.getElementById("btnPDF");
-
-      // Temporarily override the download button's click
-      const originalDownloadClick = downloadBtn.onclick;
-      downloadBtn.click(); // This now triggers handlePDF from app.js
-
-      // After a short delay, restore the original state
-      setTimeout(() => {
-        document.querySelector("#shareModal .modal-close-btn").click();
-        window.restoreCalculatorState(tempState);
-      }, 1000);
     }
   } else {
     // User is logged out
