@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Flange Rate Calculator</title>
+    <title>Flange Rate Calculator - Login</title>
     <!-- jsPDF and html2canvas Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -17,7 +17,6 @@
         --shadow: 0 8px 26px rgba(15, 23, 42, 0.08);
         --primary: #2563eb;
         --primary-weak: #eff6ff;
-        --danger: #ef4444;
       }
       * {
         box-sizing: border-box;
@@ -34,7 +33,7 @@
       }
       .wrap {
         max-width: 980px;
-        margin: 24px auto;
+        margin: 80px auto 24px; /* Increased top margin to clear the fixed header */
         padding: 0 14px;
       }
       .card {
@@ -53,11 +52,8 @@
         margin-bottom: 6px;
       }
       select,
-      input[type="number"],
-      input[type="text"],
-      input[type="password"],
-      textarea,
-      input[type="file"] {
+      input,
+      textarea {
         width: 100%;
         padding: 10px 12px;
         border: 1px solid var(--border);
@@ -132,25 +128,133 @@
       }
       .btn {
         appearance: none;
-        border: 1px solid var(--border);
+        border: 1px solid transparent;
         border-radius: 10px;
         background: #0f172a;
         color: #fff;
         padding: 10px 14px;
         font-weight: 700;
         cursor: pointer;
+        transition: all 0.2s;
+      }
+      .btn:hover {
+        background: #334155;
       }
       .btn:active {
         transform: translateY(1px);
       }
       .btn-primary {
         background-color: var(--primary);
+      }
+      .btn-secondary {
+        background-color: transparent;
+        color: var(--primary);
         border-color: var(--primary);
       }
-      .btn-danger {
-        background-color: var(--danger);
-        border-color: var(--danger);
+      /* Auth Form Styles */
+      #auth-container {
+        max-width: 400px;
+        width: 100%;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
       }
+      .auth-form {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+      }
+      .auth-form h2 {
+        text-align: center;
+        margin-top: 0;
+      }
+      .error-message {
+        color: #b91c1c;
+        font-size: 13px;
+        text-align: center;
+        min-height: 18px;
+      }
+      .auth-toggle {
+        font-size: 13px;
+        text-align: center;
+        margin-top: 15px;
+      }
+      .auth-toggle a {
+        color: var(--primary);
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      #app-container {
+        width: 100%;
+      }
+      .app-header {
+        display: flex;
+        justify-content: center; /* Centered header content */
+        align-items: center;
+        padding: 10px 20px;
+        gap: 15px;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        background: var(--bg);
+        z-index: 100;
+        border-bottom: 1px solid var(--border);
+      }
+
+      /* Modal Styles */
+      .modal-overlay {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(15, 23, 42, 0.7);
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+      }
+      .modal-content {
+        background-color: var(--bg);
+        margin: auto;
+        border-radius: 16px;
+        max-width: 900px;
+        width: 100%;
+        animation: fadeIn 0.3s;
+      }
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--border);
+      }
+      .modal-header h2 {
+        margin: 0;
+        font-size: 18px;
+      }
+      .modal-close-btn {
+        color: var(--muted);
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+        line-height: 1;
+      }
+      .modal-close-btn:hover,
+      .modal-close-btn:focus {
+        color: var(--ink);
+      }
+      .modal-body {
+        padding: 20px;
+        max-height: 80vh;
+        overflow-y: auto;
+      }
+
       #printArea {
         position: absolute;
         left: -9999px;
@@ -228,53 +332,7 @@
         font-size: 16px;
         font-weight: 800;
       }
-      .modal-overlay {
-        display: none;
-        position: fixed;
-        z-index: 1000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        overflow: auto;
-        background-color: rgba(15, 23, 42, 0.7);
-        justify-content: center;
-        align-items: center;
-        padding: 20px;
-      }
-      .modal-content {
-        background-color: var(--bg);
-        margin: auto;
-        border-radius: 16px;
-        max-width: 900px;
-        width: 100%;
-        animation: fadeIn 0.3s;
-      }
-      .modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 14px 20px;
-        border-bottom: 1px solid var(--border);
-      }
-      .modal-header h2 {
-        margin: 0;
-        font-size: 18px;
-      }
-      .modal-close-btn {
-        color: var(--muted);
-        font-size: 28px;
-        font-weight: bold;
-        cursor: pointer;
-        line-height: 1;
-      }
-      .modal-close-btn:hover,
-      .modal-close-btn:focus {
-        color: var(--ink);
-      }
-      .modal-body {
-        padding: 20px;
-      }
+
       @keyframes fadeIn {
         from {
           opacity: 0;
@@ -285,130 +343,248 @@
           transform: scale(1);
         }
       }
-      #auth-container {
-        background: #fff;
+
+      /* --- Added for Quotation List Actions --- */
+      .quotation-item {
+        border: 1px solid var(--border);
         border-radius: 12px;
-        padding: 8px 12px;
-        margin-bottom: 20px;
-        text-align: center;
-        font-size: 14px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 12px;
+        padding: 12px;
+        margin-bottom: 10px;
+        background: #fff;
       }
-      #auth-modal .modal-content {
-        max-width: 400px;
-      }
-      #auth-modal .form-toggle {
-        text-align: center;
-        margin-top: 16px;
-        font-size: 14px;
-      }
-      #auth-modal .form-toggle a {
-        color: var(--primary);
-        text-decoration: underline;
-        cursor: pointer;
-      }
-      #auth-error {
-        color: var(--danger);
-        font-size: 14px;
-        text-align: center;
-        margin-top: 12px;
-        min-height: 1.2em;
-      }
-      #save-quote-btn {
-        display: none;
-      }
-      #my-quotations-container {
-        display: none;
-      }
-      .saved-quote-item {
+      .quotation-item-header {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        padding: 12px;
-        border-bottom: 1px solid var(--border);
+        font-weight: 700;
+        font-size: 15px;
+        margin-bottom: 4px;
       }
-      .saved-quote-item:last-child {
-        border-bottom: none;
+      .quotation-item-date {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .quotation-item-actions {
+        margin-top: 10px;
+        border-top: 1px solid var(--border);
+        padding-top: 10px;
+        display: flex;
+        gap: 8px;
+      }
+      .btn-action {
+        appearance: none;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #f9fafb;
+        color: var(--ink);
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .btn-action:hover {
+        background: #f3f4f6;
+      }
+      .btn-action.delete {
+        background-color: #fee2e2;
+        border-color: #fca5a5;
+        color: #b91c1c;
+      }
+      .btn-action.delete:hover {
+        background-color: #fecaca;
       }
     </style>
   </head>
   <body>
-    <!-- ======== AUTHENTICATION UI ======== -->
-    <div class="wrap">
-      <div id="auth-container"></div>
+    <!-- Authentication Container -->
+    <div id="auth-container">
+      <div class="card block" id="login-view">
+        <form class="auth-form" id="login-form">
+          <h2>Login</h2>
+          <p class="error-message" id="login-error"></p>
+          <div>
+            <label for="login-email" class="small">Email Address</label>
+            <input
+              id="login-email"
+              type="email"
+              required
+              placeholder="you@example.com"
+            />
+          </div>
+          <div>
+            <label for="login-password" class="small">Password</label>
+            <input
+              id="login-password"
+              type="password"
+              required
+              placeholder="••••••••"
+            />
+          </div>
+          <button type="submit" class="btn btn-primary">Login</button>
+        </form>
+        <p class="auth-toggle">
+          Don't have an account? <a id="show-signup">Sign Up</a>
+        </p>
+      </div>
+
+      <div class="card block" id="signup-view" style="display: none">
+        <form class="auth-form" id="signup-form">
+          <h2>Create Account</h2>
+          <p class="error-message" id="signup-error"></p>
+          <div>
+            <label for="signup-email" class="small">Email Address</label>
+            <input
+              id="signup-email"
+              type="email"
+              required
+              placeholder="you@example.com"
+            />
+          </div>
+          <div>
+            <label for="signup-password" class="small">Password</label>
+            <input
+              id="signup-password"
+              type="password"
+              required
+              placeholder="6+ characters"
+            />
+          </div>
+          <button type="submit" class="btn btn-primary">Sign Up</button>
+        </form>
+        <p class="auth-toggle">
+          Already have an account? <a id="show-login">Login</a>
+        </p>
+      </div>
     </div>
 
-    <div class="wrap" id="main-app-content">
-      <div class="card block">
-        <label class="small">Select Product</label
-        ><select id="productPick"></select>
-      </div>
-      <div class="card block" style="margin-top: 14px">
-        <label class="small">Select Product Template</label>
-        <select id="rowPick"></select>
-        <div class="quote">
-          <h2>Final Quotation</h2>
-          <div class="amt" id="finalAmt">₹0.00</div>
-          <button
-            id="save-quote-btn"
-            class="btn btn-primary"
-            style="margin-top: 12px"
-          >
-            Save Quotation
-          </button>
-        </div>
-      </div>
-      <div class="card" style="margin-top: 14px">
-        <div class="section-title">Client Specifications & Rates</div>
-        <div class="block">
-          <div class="inputs-grid" id="inputs"></div>
-        </div>
-      </div>
-      <div class="card" style="margin-top: 14px">
-        <div class="section-title">Calculated Results</div>
-        <div class="block">
-          <div class="grid-3" id="results"></div>
-        </div>
+    <!-- Main Application Container -->
+    <main id="app-container" style="display: none">
+      <div class="app-header">
+        <span id="user-email"></span>
+        <button id="logout-button" class="btn btn-secondary">Logout</button>
       </div>
 
-      <div class="card" style="margin-top: 14px" id="my-quotations-container">
-        <div class="section-title">My Saved Quotations</div>
-        <div class="block" id="my-quotations-list"></div>
-      </div>
+      <div class="wrap">
+        <div class="card block">
+          <label class="small">Select Product</label>
+          <select id="productPick"></select>
+        </div>
+        <div class="card block">
+          <label class="small">Select Product Template</label>
+          <select id="rowPick"></select>
+          <div class="quote">
+            <h2>Final Quotation</h2>
+            <div class="amt" id="finalAmt">₹0.00</div>
+          </div>
+        </div>
+        <div class="card" style="margin-top: 14px">
+          <div class="section-title">Client Specifications & Rates</div>
+          <div class="block">
+            <div class="inputs-grid" id="inputs"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top: 14px">
+          <div class="section-title">Calculated Results</div>
+          <div class="block">
+            <div class="grid-3" id="results"></div>
+          </div>
+        </div>
 
-      <div
-        class="card"
-        style="margin-top: 24px; padding: 16px; text-align: center"
-      >
-        <button
-          id="openShareModalBtn"
-          class="btn"
+        <!-- NEW: Client Details for Saving -->
+        <div class="card" style="margin-top: 24px">
+          <div class="section-title">Client Details for Saving</div>
+          <div class="block">
+            <div class="row" style="gap: 12px">
+              <div style="flex: 1; min-width: 200px">
+                <label class="small">Client Name *</label>
+                <input
+                  id="main-client-name"
+                  type="text"
+                  placeholder="Enter client's name to save"
+                />
+              </div>
+              <div style="flex: 1; min-width: 160px">
+                <label class="small">Client Mobile</label>
+                <input
+                  id="main-client-mobile"
+                  type="text"
+                  placeholder="Enter client's mobile"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="card"
           style="
-            width: 100%;
-            max-width: 300px;
-            padding: 12px;
-            font-size: 16px;
-            background: var(--primary);
+            margin-top: 14px;
+            padding: 16px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
           "
         >
-          Generate & Share PDF
-        </button>
+          <button
+            id="new-quotation-btn"
+            class="btn"
+            style="
+              flex-grow: 1;
+              max-width: 300px;
+              padding: 12px;
+              font-size: 16px;
+              display: none;
+            "
+          >
+            Clear & Start New
+          </button>
+          <button
+            id="save-quotation-btn"
+            class="btn btn-secondary"
+            style="
+              flex-grow: 1;
+              max-width: 300px;
+              padding: 12px;
+              font-size: 16px;
+            "
+          >
+            Save This Quotation
+          </button>
+          <button
+            id="openShareModalBtn"
+            class="btn btn-primary"
+            style="
+              flex-grow: 1;
+              max-width: 300px;
+              padding: 12px;
+              font-size: 16px;
+            "
+          >
+            Generate & Share PDF
+          </button>
+        </div>
+
+        <!-- Saved Quotations Section -->
+        <div class="card" style="margin-top: 24px">
+          <div class="section-title">My Saved Quotations</div>
+          <div id="saved-quotations-list" class="block">
+            <!-- Quotations will be loaded here -->
+          </div>
+        </div>
+
+        <div id="printArea">
+          <div id="printBackgroundLogo" class="print-background-logo"></div>
+          <div class="print-wrap" id="printWrap"></div>
+        </div>
       </div>
-      <div id="printArea">
-        <div id="printBackgroundLogo" class="print-background-logo"></div>
-        <div class="print-wrap" id="printWrap"></div>
-      </div>
-    </div>
+    </main>
 
     <!-- Share Modal -->
     <div id="shareModal" class="modal-overlay">
       <div class="modal-content">
         <div class="modal-header">
           <h2>Quotation Details</h2>
-          <span class="modal-close-btn" id="close-share-modal">&times;</span>
+          <span class="modal-close-btn">&times;</span>
         </div>
         <div class="modal-body">
           <div class="row" style="gap: 12px">
@@ -499,51 +675,36 @@
       </div>
     </div>
 
-    <!-- AUTHENTICATION MODAL -->
-    <div id="auth-modal" class="modal-overlay">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2 id="auth-title">Login</h2>
-          <span class="modal-close-btn" id="close-auth-modal">&times;</span>
-        </div>
-        <div class="modal-body">
-          <form id="auth-form">
-            <div>
-              <label for="auth-email" class="small">Email</label>
-              <input type="email" id="auth-email" required />
-            </div>
-            <div style="margin-top: 12px">
-              <label for="auth-password" class="small">Password</label>
-              <input type="password" id="auth-password" required />
-            </div>
-            <div id="auth-error"></div>
-            <div style="margin-top: 16px">
-              <button
-                type="submit"
-                id="auth-submit-btn"
-                class="btn btn-primary"
-                style="width: 100%"
-              >
-                Login
-              </button>
-            </div>
-          </form>
-          <div class="form-toggle">
-            <span id="auth-toggle-text"
-              >Don't have an account? <a id="auth-toggle-link">Sign Up</a></span
-            >
+    <!-- Custom Alert/Confirm Modal -->
+    <div id="custom-modal" class="modal-overlay" style="z-index: 2000">
+      <div class="modal-content" style="max-width: 450px">
+        <div class="modal-body" style="text-align: center">
+          <p
+            id="custom-modal-message"
+            style="font-size: 16px; margin: 20px 0"
+          ></p>
+          <div
+            id="custom-modal-buttons"
+            style="display: flex; justify-content: center; gap: 15px"
+          >
+            <button id="custom-modal-ok" class="btn btn-primary">OK</button>
+            <button id="custom-modal-confirm" class="btn btn-primary">
+              Yes
+            </button>
+            <button id="custom-modal-cancel" class="btn btn-secondary">
+              Cancel
+            </button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Firebase SDK Scripts (Order is important!) -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
 
-    <!-- Your Application Scripts -->
-    
+    <!-- External JavaScript files -->
     <script src="product_asasorf.js"></script>
     <script src="product_tabled.js"></script>
     <script src="product_tablee.js"></script>
@@ -554,8 +715,8 @@
     <script src="product_asacl300sorf.js"></script>
     <script src="product_pn10.js"></script>
     <script src="product_pn6ff.js"></script>
-    <script src="firebase-auth.js"></script>
-    <script src="firebase-firestore.js"></script>
     <script src="app.js"></script>
+    <!-- NEW Firebase Auth script -->
+    <script src="firebase-auth.js"></script>
   </body>
 </html>
