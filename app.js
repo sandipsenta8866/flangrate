@@ -50,7 +50,6 @@ document.addEventListener("DOMContentLoaded", () => {
       return "₹" + fmtDec(v, d);
     }
   }
-  // Expose for use in other files
   window.inr = inr;
 
   function getCurrentConfig() {
@@ -268,7 +267,7 @@ document.addEventListener("DOMContentLoaded", () => {
     dSel.value = now.getDate();
   }
 
-  function getBrand() {
+  function getBrandFromModal() {
     const v = (id) => (document.getElementById(id)?.value || "").trim();
     const dd = String(document.getElementById("qDay")?.value || "01").padStart(
       2,
@@ -292,17 +291,28 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  function buildPrintDoc() {
+  function buildPrintDoc(brandData, quoteInputs, quoteProductKey, quoteRowKey) {
     const logoContainer = document.getElementById("printBackgroundLogo");
     const savedLogo = localStorage.getItem("brandLogo");
     logoContainer.style.backgroundImage = savedLogo
       ? `url(${savedLogo})`
       : "none";
-    const B = getBrand();
+
+    const B = brandData;
+    // Temporarily set global state for calculation
+    const originalProductKey = currentProductKey;
+    const originalRowKey = currentRowKey;
+    currentProductKey = quoteProductKey;
+    currentRowKey = quoteRowKey;
+
     const config = getCurrentConfig();
     const rowLabel = config.ROW_LABELS[currentRowKey] || "Row " + currentRowKey;
-    const IN = getIN();
-    const OUT = computeOutputs(IN);
+    const OUT = computeOutputs(quoteInputs);
+
+    // Restore global state
+    currentProductKey = originalProductKey;
+    currentRowKey = originalRowKey;
+
     const wrap = document.getElementById("printWrap");
     wrap.innerHTML = "";
     const head = document.createElement("div");
@@ -345,7 +355,7 @@ document.addEventListener("DOMContentLoaded", () => {
     getPDFSpecCols().forEach((c) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `<td>${config.INPUT_HEADERS[c] || c}</td><td>${fmtDec(
-        IN[c],
+        quoteInputs[c],
         2
       )}</td>`;
       b1.appendChild(tr);
@@ -362,7 +372,10 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function handlePDF() {
-    buildPrintDoc();
+    const brandData = getBrandFromModal();
+    const quoteInputs = getIN();
+    buildPrintDoc(brandData, quoteInputs, currentProductKey, currentRowKey);
+
     const btn = document.getElementById("btnPDF");
     btn.textContent = "Generating...";
     btn.disabled = true;
@@ -504,11 +517,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const finalAmountString =
       document.getElementById("finalAmt").textContent || "₹0";
     const finalAmount = Number(finalAmountString.replace(/[^0-9.-]+/g, ""));
+
+    const config = getCurrentConfig();
+    const rowLabel = config.ROW_LABELS[currentRowKey] || "";
+
     return {
       inputs: getIN(),
       productKey: currentProductKey,
       rowKey: currentRowKey,
-      brandDetails: getBrand(),
+      rowLabel: rowLabel,
+      brandDetails: getBrandFromModal(),
       finalAmount: finalAmount,
     };
   };
@@ -558,4 +576,43 @@ document.addEventListener("DOMContentLoaded", () => {
     mainClientMobile.dispatchEvent(new Event("input"));
     initProductSelector();
   };
+
+  function generatePDFDirectly(quotationData) {
+    if (!quotationData || !quotationData.brandDetails) {
+      alert("Cannot generate PDF: quotation data is missing.");
+      return;
+    }
+
+    buildPrintDoc(
+      quotationData.brandDetails,
+      quotationData.inputs,
+      quotationData.productKey,
+      quotationData.rowKey
+    );
+
+    const printArea = document.getElementById("printArea");
+    printArea.style.display = "block";
+
+    html2canvas(printArea, { scale: 1.5, useCORS: true })
+      .then((canvas) => {
+        const imgData = canvas.toDataURL("image/jpeg", 0.95);
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF("p", "mm", "a4");
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const ratio = canvas.width / canvas.height;
+        const imgWidth = pdfWidth - 20;
+        const imgHeight = imgWidth / ratio;
+        pdf.addImage(imgData, "JPEG", 10, 15, imgWidth, imgHeight);
+        pdf.save(
+          `quotation-${quotationData.brandDetails.clientName || "download"}.pdf`
+        );
+        printArea.style.display = "none";
+      })
+      .catch((err) => {
+        console.error("Error generating PDF directly:", err);
+        printArea.style.display = "none";
+        alert("An error occurred while generating the PDF.");
+      });
+  }
+  window.generatePDFDirectly = generatePDFDirectly;
 });
