@@ -12,6 +12,7 @@ const authManager = (() => {
     messagingSenderId: "733249151125",
     appId: "1:733249151125:web:2b64119accce4848edfb9c",
   };
+
   // --- Initialize Firebase ---
   let app;
   let auth;
@@ -23,7 +24,6 @@ const authManager = (() => {
       "Firebase initialization failed. Please check your firebaseConfig object.",
       e
     );
-    // Hide the auth feature if Firebase fails to load
     const authContainer = document.getElementById("auth-container");
     if (authContainer)
       authContainer.innerHTML =
@@ -42,6 +42,7 @@ const authManager = (() => {
   const authToggleLink = document.getElementById("auth-toggle-link");
   const authToggleText = document.getElementById("auth-toggle-text");
   const authError = document.getElementById("auth-error");
+  const saveQuoteBtn = document.getElementById("save-quote-btn");
 
   let isLoginMode = true;
 
@@ -56,6 +57,12 @@ const authManager = (() => {
       document
         .getElementById("logout-btn")
         .addEventListener("click", handleLogout);
+      if (saveQuoteBtn) saveQuoteBtn.style.display = "inline-block"; // Show the save button
+
+      // Tell the firestoreManager to start listening for this user's data
+      if (window.firestoreManager) {
+        firestoreManager.listenForQuotations();
+      }
     } else {
       // User is signed out
       authContainer.innerHTML = `
@@ -67,6 +74,12 @@ const authManager = (() => {
         .addEventListener("click", () => {
           authModal.style.display = "flex";
         });
+      if (saveQuoteBtn) saveQuoteBtn.style.display = "none"; // Hide the save button
+
+      // Tell the firestoreManager to stop listening and clear data
+      if (window.firestoreManager) {
+        firestoreManager.stopListeningForQuotations();
+      }
     }
   };
 
@@ -77,6 +90,7 @@ const authManager = (() => {
     authToggleText.innerHTML = isLoginMode
       ? `Don't have an account? <a id="auth-toggle-link">Sign Up</a>`
       : `Already have an account? <a id="auth-toggle-link">Login</a>`;
+    // Re-add event listener after innerHTML is changed
     document
       .getElementById("auth-toggle-link")
       .addEventListener("click", toggleAuthMode);
@@ -92,7 +106,6 @@ const authManager = (() => {
     authError.textContent = "";
 
     if (isLoginMode) {
-      // Handle Login
       auth
         .signInWithEmailAndPassword(email, password)
         .then((userCredential) => {
@@ -103,7 +116,6 @@ const authManager = (() => {
           authError.textContent = error.message;
         });
     } else {
-      // Handle Sign Up
       auth
         .createUserWithEmailAndPassword(email, password)
         .then((userCredential) => {
@@ -122,18 +134,16 @@ const authManager = (() => {
 
   // --- Initialization ---
   const init = () => {
-    if (!auth) return; // Don't run if Firebase init failed
+    if (!auth) return;
 
     closeAuthModalBtn.addEventListener("click", () => {
       authModal.style.display = "none";
       authForm.reset();
       authError.textContent = "";
     });
-
     authToggleLink.addEventListener("click", toggleAuthMode);
     authForm.addEventListener("submit", handleAuthSubmit);
 
-    // Listen for authentication state changes
     auth.onAuthStateChanged((user) => {
       updateAuthUI(user);
     });
@@ -144,5 +154,4 @@ const authManager = (() => {
   };
 })();
 
-// Initialize the module when the DOM is ready
 document.addEventListener("DOMContentLoaded", authManager.init);
