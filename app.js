@@ -210,15 +210,24 @@ document.addEventListener("DOMContentLoaded", () => {
     reader.readAsDataURL(file);
   }
   function loadLogo() {
-    try {
-      const savedLogo = localStorage.getItem("brandLogo");
-      if (savedLogo) {
-        document.getElementById("logoPreview").src = savedLogo;
+    const logoPreview = document.getElementById("logoPreview");
+    return new Promise((resolve) => {
+      logoPreview.onload = resolve;
+      logoPreview.onerror = resolve; // Resolve even if there's an error to not block PDF generation
+      try {
+        const savedLogo = localStorage.getItem("brandLogo");
+        if (savedLogo) {
+          logoPreview.src = savedLogo;
+        } else {
+          resolve(); // Resolve if no logo is saved
+        }
+      } catch (err) {
+        console.error("Error loading logo from localStorage:", err);
+        resolve();
       }
-    } catch (err) {
-      console.error("Error loading logo from localStorage:", err);
-    }
+    });
   }
+
   function populateDateDropdowns() {
     const now = new Date();
     const ySel = document.getElementById("qYear"),
@@ -294,6 +303,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function buildPrintDocForItem(brandData, quoteItem) {
     const tempContainer = document.createElement("div");
 
+    // Temporarily set global state for calculation
     const originalProductKey = currentProductKey;
     const originalRowKey = currentRowKey;
     currentProductKey = quoteItem.productKey;
@@ -303,6 +313,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const rowLabel = `${quoteItem.productKey} ${quoteItem.rowLabel}`;
     const OUT = computeOutputs(quoteItem.inputs);
 
+    // Restore global state
     currentProductKey = originalProductKey;
     currentRowKey = originalRowKey;
 
@@ -361,48 +372,25 @@ document.addEventListener("DOMContentLoaded", () => {
     return tempContainer;
   }
 
-  async function generatePdf(pdfBuilder) {
-    const printArea = document.getElementById("printArea");
-    const printLogoImg = document.getElementById("printLogoImg");
-    const logoSrc = localStorage.getItem("brandLogo");
+  async function handlePDF() {
+    await loadLogo();
+    const brandData = getBrandFromModal();
+    const quoteItem = window.getCalculatorState();
+    const printWrap = document.getElementById("printWrap");
+    printWrap.innerHTML = "";
+    const itemHtml = buildPrintDocForItem(brandData, quoteItem);
+    document.getElementById("printLogoImg").src =
+      document.getElementById("logoPreview").src;
+    printWrap.appendChild(itemHtml);
 
-    const logoPromise = new Promise((resolve) => {
-      if (logoSrc) {
-        printLogoImg.onload = resolve;
-        printLogoImg.onerror = resolve; // Continue even if logo fails
-        printLogoImg.src = logoSrc;
-      } else {
-        printLogoImg.src = "";
-        resolve();
-      }
-    });
-
-    await logoPromise;
-    await pdfBuilder();
-  }
-
-  function handlePDF() {
     const btn = document.getElementById("btnPDF");
     btn.textContent = "Generating...";
     btn.disabled = true;
+    const printArea = document.getElementById("printArea");
+    printArea.style.display = "block";
 
-    generatePdf(async () => {
-      const brandData = getBrandFromModal();
-      const quoteItem = window.getCalculatorState();
-      const printWrap = document.getElementById("printWrap");
-      printWrap.innerHTML = "";
-      const itemHtml = buildPrintDocForItem(brandData, quoteItem);
-      printWrap.appendChild(itemHtml);
-
-      const printArea = document.getElementById("printArea");
-      printArea.style.display = "block";
-
-      try {
-        const canvas = await html2canvas(printArea, {
-          scale: 1.5,
-          useCORS: true,
-          allowTaint: true,
-        });
+    html2canvas(printArea, { scale: 1.5, useCORS: true })
+      .then((canvas) => {
         const imgData = canvas.toDataURL("image/jpeg", 0.95);
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF("p", "mm", "a4");
@@ -412,14 +400,16 @@ document.addEventListener("DOMContentLoaded", () => {
         const imgHeight = imgWidth / ratio;
         pdf.addImage(imgData, "JPEG", 10, 15, imgWidth, imgHeight);
         pdf.save("quotation.pdf");
-      } catch (err) {
-        console.error("Error generating PDF:", err);
-      } finally {
         printArea.style.display = "none";
         btn.textContent = "Confirm & Download PDF";
         btn.disabled = false;
-      }
-    });
+      })
+      .catch((err) => {
+        console.error("Error generating PDF:", err);
+        printArea.style.display = "none";
+        btn.textContent = "Confirm & Download PDF";
+        btn.disabled = false;
+      });
   }
 
   // --- Safe brand defaults + persistence ---
@@ -544,17 +534,18 @@ document.addEventListener("DOMContentLoaded", () => {
       rowKey: currentRowKey,
       rowLabel: rowLabel,
       finalAmount: finalAmount,
+      quantity: n(document.getElementById("main-quantity").value) || 1,
     };
   };
 
   window.resetCalculator = (isAddingMode = false) => {
     if (!isAddingMode) {
-      const mainClientName = document.getElementById("main-client-name");
-      if (mainClientName) mainClientName.value = "";
-      const mainClientMobile = document.getElementById("main-client-mobile");
-      if (mainClientMobile) mainClientMobile.value = "";
-      mainClientName.dispatchEvent(new Event("input"));
-      mainClientMobile.dispatchEvent(new Event("input"));
+      document.getElementById("main-client-name").value = "";
+      document.getElementById("main-client-mobile").value = "";
+      document.getElementById("main-quantity").value = 1;
+      document
+        .getElementById("main-client-name")
+        .dispatchEvent(new Event("input"));
     }
     initProductSelector();
   };
@@ -580,46 +571,46 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
+    document.getElementById("main-quantity").value = state.quantity || 1;
     recalc();
   };
 
   async function generateMultiItemPDF(masterQuotationData) {
-    generatePdf(async () => {
-      if (
-        !masterQuotationData ||
-        !masterQuotationData.items ||
-        masterQuotationData.items.length === 0
-      ) {
-        alert("Cannot generate PDF: no items in this quotation.");
-        return;
-      }
+    if (
+      !masterQuotationData ||
+      !masterQuotationData.items ||
+      masterQuotationData.items.length === 0
+    ) {
+      alert("Cannot generate PDF: no items in this quotation.");
+      return;
+    }
 
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF("p", "mm", "a4");
-      const printArea = document.getElementById("printArea");
+    await loadLogo();
+    document.getElementById("printLogoImg").src =
+      document.getElementById("logoPreview").src;
 
-      for (let i = 0; i < masterQuotationData.items.length; i++) {
-        const item = masterQuotationData.items[i];
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF("p", "mm", "a4");
+    const printArea = document.getElementById("printArea");
 
-        const brandDetailsForPDF = {
-          ...getBrandFromModal(),
-          clientName: masterQuotationData.clientName,
-          clientMobile: masterQuotationData.clientMobile,
-        };
+    for (let i = 0; i < masterQuotationData.items.length; i++) {
+      const item = masterQuotationData.items[i];
 
-        const printWrap = document.getElementById("printWrap");
-        printWrap.innerHTML = "";
-        const itemHtml = buildPrintDocForItem(brandDetailsForPDF, item);
-        printWrap.appendChild(itemHtml);
+      const brandDetailsForPDF = {
+        ...getBrandFromModal(),
+        clientName: masterQuotationData.clientName,
+        clientMobile: masterQuotationData.clientMobile,
+      };
 
-        printArea.style.display = "block";
+      const printWrap = document.getElementById("printWrap");
+      printWrap.innerHTML = "";
+      const itemHtml = buildPrintDocForItem(brandDetailsForPDF, item);
+      printWrap.appendChild(itemHtml);
 
-        try {
-          const canvas = await html2canvas(printArea, {
-            scale: 1.5,
-            useCORS: true,
-            allowTaint: true,
-          });
+      printArea.style.display = "block";
+
+      await html2canvas(printWrap, { scale: 1.5, useCORS: true }).then(
+        (canvas) => {
           const imgData = canvas.toDataURL("image/jpeg", 0.95);
           const pdfWidth = pdf.internal.pageSize.getWidth();
           const ratio = canvas.width / canvas.height;
@@ -630,14 +621,13 @@ document.addEventListener("DOMContentLoaded", () => {
             pdf.addPage();
           }
           pdf.addImage(imgData, "JPEG", 10, 15, imgWidth, imgHeight);
-        } catch (err) {
-          console.error(`Error processing page ${i + 1} for PDF:`, err);
-        } finally {
-          printArea.style.display = "none";
         }
-      }
-      pdf.save(`quotation-${masterQuotationData.clientName || "download"}.pdf`);
-    });
+      );
+
+      printArea.style.display = "none";
+    }
+
+    pdf.save(`quotation-${masterQuotationData.clientName || "download"}.pdf`);
   }
   window.generateMultiItemPDF = generateMultiItemPDF;
 });
