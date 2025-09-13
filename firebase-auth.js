@@ -25,6 +25,8 @@ let currentItemIndex = null;
 let quotationsListener = null;
 let allQuotations = [];
 let activeStatusFilter = null;
+let selectedMonth = "all";
+let selectedYear = "all";
 
 // --- Auth State Change Listener ---
 auth.onAuthStateChanged((user) => {
@@ -51,6 +53,8 @@ auth.onAuthStateChanged((user) => {
     const itemPickerCloseBtn =
       itemPickerModal.querySelector(".modal-close-btn");
     const searchInput = document.getElementById("search-quotations-input");
+    const monthFilter = document.getElementById("dashboard-month-filter");
+    const yearFilter = document.getElementById("dashboard-year-filter");
 
     // --- Custom Modal Helpers ---
     const customModal = document.getElementById("custom-modal");
@@ -121,8 +125,16 @@ auth.onAuthStateChanged((user) => {
       exitAllModes();
     });
 
-    searchInput.addEventListener("input", (e) => {
-      applyFilters();
+    searchInput.addEventListener("input", applyFilters);
+    monthFilter.addEventListener("change", (e) => {
+      selectedMonth =
+        e.target.value === "all" ? "all" : parseInt(e.target.value, 10);
+      applyFiltersAndUpdateDashboard();
+    });
+    yearFilter.addEventListener("change", (e) => {
+      selectedYear =
+        e.target.value === "all" ? "all" : parseInt(e.target.value, 10);
+      applyFiltersAndUpdateDashboard();
     });
 
     document
@@ -213,7 +225,7 @@ auth.onAuthStateChanged((user) => {
           clientMobile: mainClientMobile.value.trim(),
           createdAt: serverTimestamp(),
           userId: user.uid,
-          status: "Draft", // Set initial status
+          status: "Draft",
           items: [newItemData],
         };
 
@@ -244,8 +256,8 @@ auth.onAuthStateChanged((user) => {
               id: doc.id,
               ...doc.data(),
             }));
-            updateDashboard();
-            applyFilters();
+            populateDateFilters();
+            applyFiltersAndUpdateDashboard();
             searchInput.value = "";
           },
           (error) => {
@@ -256,12 +268,64 @@ auth.onAuthStateChanged((user) => {
         );
     }
 
+    function populateDateFilters() {
+      const years = [
+        ...new Set(
+          allQuotations
+            .map((q) => q.createdAt?.toDate().getFullYear())
+            .filter((y) => y)
+        ),
+      ];
+      years.sort((a, b) => b - a);
+
+      yearFilter.innerHTML = '<option value="all">All Years</option>';
+      years.forEach((year) => {
+        const option = document.createElement("option");
+        option.value = year;
+        option.textContent = year;
+        yearFilter.appendChild(option);
+      });
+
+      const monthNames = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+      ];
+      monthFilter.innerHTML = '<option value="all">All Months</option>';
+      monthNames.forEach((name, index) => {
+        const option = document.createElement("option");
+        option.value = index;
+        option.textContent = name;
+        monthFilter.appendChild(option);
+      });
+
+      const currentYear = new Date().getFullYear();
+
+      selectedYear = years.includes(currentYear) ? currentYear : "all";
+      selectedMonth = "all";
+
+      yearFilter.value = selectedYear;
+      monthFilter.value = selectedMonth;
+    }
+
     function renderQuotations(quotations) {
       const list = document.getElementById("saved-quotations-list");
       list.innerHTML = "";
       if (quotations.length === 0) {
         list.innerHTML = `<p>${
-          searchInput.value || activeStatusFilter
+          searchInput.value ||
+          activeStatusFilter ||
+          selectedMonth !== "all" ||
+          selectedYear !== "all"
             ? "No quotations match your filters."
             : "No saved quotations yet."
         }</p>`;
@@ -279,7 +343,7 @@ auth.onAuthStateChanged((user) => {
 
         const date = data.createdAt?.toDate().toLocaleString() || "No date";
         const totalAmount = data.items.reduce(
-          (sum, item) => sum + (item.finalAmount || 0),
+          (sum, item) => sum + (item.finalAmount || 0) * (item.quantity || 1),
           0
         );
         const formattedTotalAmount = window.inr
@@ -297,10 +361,12 @@ auth.onAuthStateChanged((user) => {
             const formattedAmount = window.inr
               ? window.inr(item.finalAmount, 0)
               : `₹${item.finalAmount}`;
+            const quantityText =
+              item.quantity > 1 ? ` (Qty: ${item.quantity})` : "";
             return `
                     <div class="sub-item">
                         <div class="sub-item-info">
-                            <strong>${item.productKey}</strong> - ${item.rowLabel}
+                            <strong>${item.productKey}</strong> - ${item.rowLabel}${quantityText}
                         </div>
                         <div class="sub-item-price-wrapper">
                             <span class="sub-item-price">${formattedAmount}</span>
@@ -386,7 +452,24 @@ auth.onAuthStateChanged((user) => {
       });
     }
 
+    function applyFiltersAndUpdateDashboard() {
+      updateDashboard();
+      applyFilters();
+    }
+
     function updateDashboard() {
+      let quotesForDashboard = allQuotations;
+      if (selectedYear !== "all") {
+        quotesForDashboard = quotesForDashboard.filter(
+          (q) => q.createdAt?.toDate().getFullYear() === selectedYear
+        );
+      }
+      if (selectedMonth !== "all") {
+        quotesForDashboard = quotesForDashboard.filter(
+          (q) => q.createdAt?.toDate().getMonth() === selectedMonth
+        );
+      }
+
       const statuses = {
         Draft: { count: 0, total: 0 },
         Sent: { count: 0, total: 0 },
@@ -394,12 +477,12 @@ auth.onAuthStateChanged((user) => {
         Rejected: { count: 0, total: 0 },
       };
 
-      allQuotations.forEach((q) => {
+      quotesForDashboard.forEach((q) => {
         const status = q.status || "Draft";
         if (statuses.hasOwnProperty(status)) {
           statuses[status].count++;
-          const quoteTotal = q.items.reduce(
-            (sum, item) => sum + (item.finalAmount || 0),
+          const quoteTotal = (q.items || []).reduce(
+            (sum, item) => sum + (item.finalAmount || 0) * (item.quantity || 1),
             0
           );
           statuses[status].total += quoteTotal;
@@ -412,14 +495,12 @@ auth.onAuthStateChanged((user) => {
       document.querySelector(
         "#dashboard-draft .dashboard-card-total"
       ).textContent = window.inr ? window.inr(statuses.Draft.total, 0) : `₹0`;
-
       document.querySelector(
         "#dashboard-sent .dashboard-card-value"
       ).textContent = statuses.Sent.count;
       document.querySelector(
         "#dashboard-sent .dashboard-card-total"
       ).textContent = window.inr ? window.inr(statuses.Sent.total, 0) : `₹0`;
-
       document.querySelector(
         "#dashboard-approved .dashboard-card-value"
       ).textContent = statuses.Approved.count;
@@ -428,7 +509,6 @@ auth.onAuthStateChanged((user) => {
       ).textContent = window.inr
         ? window.inr(statuses.Approved.total, 0)
         : `₹0`;
-
       document.querySelector(
         "#dashboard-rejected .dashboard-card-value"
       ).textContent = statuses.Rejected.count;
@@ -441,7 +521,7 @@ auth.onAuthStateChanged((user) => {
 
     function toggleStatusFilter(status) {
       if (activeStatusFilter === status) {
-        activeStatusFilter = null; // Click again to clear filter
+        activeStatusFilter = null;
       } else {
         activeStatusFilter = status;
       }
@@ -460,12 +540,21 @@ auth.onAuthStateChanged((user) => {
       let filtered = allQuotations;
       const searchTerm = searchInput.value.toLowerCase().trim();
 
+      if (selectedYear !== "all") {
+        filtered = filtered.filter(
+          (q) => q.createdAt?.toDate().getFullYear() === selectedYear
+        );
+      }
+      if (selectedMonth !== "all") {
+        filtered = filtered.filter(
+          (q) => q.createdAt?.toDate().getMonth() === selectedMonth
+        );
+      }
       if (activeStatusFilter) {
         filtered = filtered.filter(
           (q) => (q.status || "Draft") === activeStatusFilter
         );
       }
-
       if (searchTerm) {
         filtered = filtered.filter((q) => {
           const clientName = q.clientName.toLowerCase();
