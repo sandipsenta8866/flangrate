@@ -291,98 +291,118 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  function buildPrintDoc(brandData, quoteInputs, quoteProductKey, quoteRowKey) {
-    const logoContainer = document.getElementById("printBackgroundLogo");
-    const savedLogo = localStorage.getItem("brandLogo");
-    logoContainer.style.backgroundImage = savedLogo
-      ? `url(${savedLogo})`
-      : "none";
+  function buildPrintDocForItem(brandData, quoteItem) {
+    const tempContainer = document.createElement("div");
 
-    const B = brandData;
-    // Temporarily set global state for calculation
     const originalProductKey = currentProductKey;
     const originalRowKey = currentRowKey;
-    currentProductKey = quoteProductKey;
-    currentRowKey = quoteRowKey;
+    currentProductKey = quoteItem.productKey;
+    currentRowKey = quoteItem.rowKey;
 
     const config = getCurrentConfig();
-    const rowLabel = config.ROW_LABELS[currentRowKey] || "Row " + currentRowKey;
-    const OUT = computeOutputs(quoteInputs);
+    const rowLabel = `${quoteItem.productKey} ${quoteItem.rowLabel}`;
+    const OUT = computeOutputs(quoteItem.inputs);
 
-    // Restore global state
     currentProductKey = originalProductKey;
     currentRowKey = originalRowKey;
 
-    const wrap = document.getElementById("printWrap");
-    wrap.innerHTML = "";
-    const head = document.createElement("div");
-    head.className = "print-header";
-    const left = document.createElement("div");
-    left.className = "print-brand";
-    left.innerHTML =
-      `<h1>${B.brandName || ""}</h1>` +
-      (B.brandPhone
-        ? `<div class='print-meta'><b>Mobile:</b> ${B.brandPhone}</div>`
-        : "") +
-      (B.brandAddr ? `<div class='print-meta'>${B.brandAddr}</div>` : "") +
-      (B.brandEmail ? `<div class='print-meta'>${B.brandEmail}</div>` : "") +
-      (B.brandGST
-        ? `<div class='print-meta'><b>GST:</b> ${B.brandGST}</div>`
-        : "");
-    const right = document.createElement("div");
-    right.className = "print-meta";
-    right.innerHTML =
-      `<div><b>Date:</b> ${B.quoteDateDMY || ""}</div>` +
-      (B.clientName ? `<div><b>Client:</b> ${B.clientName}</div>` : "") +
-      (B.clientMobile
-        ? `<div><b>Client Mobile:</b> ${B.clientMobile}</div>`
-        : "");
-    head.appendChild(left);
-    head.appendChild(right);
-    wrap.appendChild(head);
-    const title = document.createElement("div");
-    title.className = "print-title";
-    title.textContent = "QUOTATION";
-    wrap.appendChild(title);
-    const subt = document.createElement("div");
-    subt.className = "print-meta";
-    subt.innerHTML = `<b>Product Template:</b> ${rowLabel}`;
-    wrap.appendChild(subt);
-    const t1 = document.createElement("table");
-    t1.innerHTML =
-      "<thead><tr><th colspan='2'>Specifications</th></tr></thead>";
-    const b1 = document.createElement("tbody");
-    getPDFSpecCols().forEach((c) => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${config.INPUT_HEADERS[c] || c}</td><td>${fmtDec(
-        quoteInputs[c],
-        2
-      )}</td>`;
-      b1.appendChild(tr);
+    const B = brandData;
+    tempContainer.innerHTML = `
+      <div class="print-header">
+        <div class="print-brand">
+          <h1>${B.brandName || ""}</h1>
+          ${
+            B.brandPhone
+              ? `<div class='print-meta'><b>Mobile:</b> ${B.brandPhone}</div>`
+              : ""
+          }
+          ${B.brandAddr ? `<div class='print-meta'>${B.brandAddr}</div>` : ""}
+          ${B.brandEmail ? `<div class='print-meta'>${B.brandEmail}</div>` : ""}
+          ${
+            B.brandGST
+              ? `<div class='print-meta'><b>GST:</b> ${B.brandGST}</div>`
+              : ""
+          }
+        </div>
+        <div class="print-meta">
+          <div><b>Date:</b> ${B.quoteDateDMY || ""}</div>
+          <div><b>Client:</b> ${B.clientName}</div>
+          ${
+            B.clientMobile
+              ? `<div><b>Client Mobile:</b> ${B.clientMobile}</div>`
+              : ""
+          }
+        </div>
+      </div>
+      <div class="print-title">QUOTATION</div>
+      <div class="print-meta"><b>Product:</b> ${rowLabel}</div>
+      <table>
+        <thead><tr><th colspan='2'>Specifications</th></tr></thead>
+        <tbody>
+          ${(config.PDF_SPEC_COLS || [])
+            .map(
+              (c) => `
+            <tr>
+              <td>${config.INPUT_HEADERS[c] || c}</td>
+              <td>${fmtDec(quoteItem.inputs[c], 2)}</td>
+            </tr>
+          `
+            )
+            .join("")}
+        </tbody>
+      </table>
+      <div class="total-box">
+        <div class="total-line">
+          <div>Final Quotation</div>
+          <div>${inr(OUT.AA, OUTPUT_DECIMALS["AA"] ?? 0)}</div>
+        </div>
+      </div>
+    `;
+    return tempContainer;
+  }
+
+  async function generatePdf(pdfBuilder) {
+    const printArea = document.getElementById("printArea");
+    const printLogoImg = document.getElementById("printLogoImg");
+    const logoSrc = localStorage.getItem("brandLogo");
+
+    const logoPromise = new Promise((resolve) => {
+      if (logoSrc) {
+        printLogoImg.onload = resolve;
+        printLogoImg.onerror = resolve; // Continue even if logo fails
+        printLogoImg.src = logoSrc;
+      } else {
+        printLogoImg.src = "";
+        resolve();
+      }
     });
-    t1.appendChild(b1);
-    wrap.appendChild(t1);
-    const tot = document.createElement("div");
-    tot.className = "total-box";
-    tot.innerHTML = `<div class='total-line'><div>Final Quotation</div><div>${inr(
-      OUT.AA,
-      OUTPUT_DECIMALS["AA"] ?? 0
-    )}</div></div>`;
-    wrap.appendChild(tot);
+
+    await logoPromise;
+    await pdfBuilder();
   }
 
   function handlePDF() {
-    const brandData = getBrandFromModal();
-    const quoteInputs = getIN();
-    buildPrintDoc(brandData, quoteInputs, currentProductKey, currentRowKey);
-
     const btn = document.getElementById("btnPDF");
     btn.textContent = "Generating...";
     btn.disabled = true;
-    const printArea = document.getElementById("printArea");
-    printArea.style.display = "block";
-    html2canvas(printArea, { scale: 1.5, useCORS: true })
-      .then((canvas) => {
+
+    generatePdf(async () => {
+      const brandData = getBrandFromModal();
+      const quoteItem = window.getCalculatorState();
+      const printWrap = document.getElementById("printWrap");
+      printWrap.innerHTML = "";
+      const itemHtml = buildPrintDocForItem(brandData, quoteItem);
+      printWrap.appendChild(itemHtml);
+
+      const printArea = document.getElementById("printArea");
+      printArea.style.display = "block";
+
+      try {
+        const canvas = await html2canvas(printArea, {
+          scale: 1.5,
+          useCORS: true,
+          allowTaint: true,
+        });
         const imgData = canvas.toDataURL("image/jpeg", 0.95);
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF("p", "mm", "a4");
@@ -392,16 +412,14 @@ document.addEventListener("DOMContentLoaded", () => {
         const imgHeight = imgWidth / ratio;
         pdf.addImage(imgData, "JPEG", 10, 15, imgWidth, imgHeight);
         pdf.save("quotation.pdf");
-        printArea.style.display = "none";
-        btn.textContent = "Confirm & Download PDF";
-        btn.disabled = false;
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error("Error generating PDF:", err);
+      } finally {
         printArea.style.display = "none";
         btn.textContent = "Confirm & Download PDF";
         btn.disabled = false;
-      });
+      }
+    });
   }
 
   // --- Safe brand defaults + persistence ---
@@ -517,18 +535,28 @@ document.addEventListener("DOMContentLoaded", () => {
     const finalAmountString =
       document.getElementById("finalAmt").textContent || "₹0";
     const finalAmount = Number(finalAmountString.replace(/[^0-9.-]+/g, ""));
-
     const config = getCurrentConfig();
-    const rowLabel = config.ROW_LABELS[currentRowKey] || "";
+    const rowLabel = config.ROW_LABELS[currentRowKey] || `Row ${currentRowKey}`;
 
     return {
       inputs: getIN(),
       productKey: currentProductKey,
       rowKey: currentRowKey,
       rowLabel: rowLabel,
-      brandDetails: getBrandFromModal(),
       finalAmount: finalAmount,
     };
+  };
+
+  window.resetCalculator = (isAddingMode = false) => {
+    if (!isAddingMode) {
+      const mainClientName = document.getElementById("main-client-name");
+      if (mainClientName) mainClientName.value = "";
+      const mainClientMobile = document.getElementById("main-client-mobile");
+      if (mainClientMobile) mainClientMobile.value = "";
+      mainClientName.dispatchEvent(new Event("input"));
+      mainClientMobile.dispatchEvent(new Event("input"));
+    }
+    initProductSelector();
   };
 
   window.restoreCalculatorState = (state) => {
@@ -537,82 +565,79 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     currentProductKey = state.productKey;
+    currentRowKey = state.rowKey;
+
     const productPick = document.getElementById("productPick");
     productPick.value = currentProductKey;
 
     populateProductTemplateDropdown(state.rowKey);
-
     renderInputs();
 
     Object.keys(state.inputs).forEach((key) => {
       const el = document.getElementById("IN_" + key);
       if (el) {
         el.value = state.inputs[key];
-      } else {
-        console.warn(`Could not find input for key: ${key} during restore.`);
       }
     });
-    if (state.brandDetails) {
-      const mainClientName = document.getElementById("main-client-name");
-      if (mainClientName) {
-        mainClientName.value = state.brandDetails.clientName || "";
-        mainClientName.dispatchEvent(new Event("input"));
-      }
-      const mainClientMobile = document.getElementById("main-client-mobile");
-      if (mainClientMobile) {
-        mainClientMobile.value = state.brandDetails.clientMobile || "";
-        mainClientMobile.dispatchEvent(new Event("input"));
-      }
-    }
+
     recalc();
   };
 
-  window.resetCalculator = () => {
-    const mainClientName = document.getElementById("main-client-name");
-    if (mainClientName) mainClientName.value = "";
-    const mainClientMobile = document.getElementById("main-client-mobile");
-    if (mainClientMobile) mainClientMobile.value = "";
-    mainClientName.dispatchEvent(new Event("input"));
-    mainClientMobile.dispatchEvent(new Event("input"));
-    initProductSelector();
-  };
+  async function generateMultiItemPDF(masterQuotationData) {
+    generatePdf(async () => {
+      if (
+        !masterQuotationData ||
+        !masterQuotationData.items ||
+        masterQuotationData.items.length === 0
+      ) {
+        alert("Cannot generate PDF: no items in this quotation.");
+        return;
+      }
 
-  function generatePDFDirectly(quotationData) {
-    if (!quotationData || !quotationData.brandDetails) {
-      alert("Cannot generate PDF: quotation data is missing.");
-      return;
-    }
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF("p", "mm", "a4");
+      const printArea = document.getElementById("printArea");
 
-    buildPrintDoc(
-      quotationData.brandDetails,
-      quotationData.inputs,
-      quotationData.productKey,
-      quotationData.rowKey
-    );
+      for (let i = 0; i < masterQuotationData.items.length; i++) {
+        const item = masterQuotationData.items[i];
 
-    const printArea = document.getElementById("printArea");
-    printArea.style.display = "block";
+        const brandDetailsForPDF = {
+          ...getBrandFromModal(),
+          clientName: masterQuotationData.clientName,
+          clientMobile: masterQuotationData.clientMobile,
+        };
 
-    html2canvas(printArea, { scale: 1.5, useCORS: true })
-      .then((canvas) => {
-        const imgData = canvas.toDataURL("image/jpeg", 0.95);
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF("p", "mm", "a4");
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const ratio = canvas.width / canvas.height;
-        const imgWidth = pdfWidth - 20;
-        const imgHeight = imgWidth / ratio;
-        pdf.addImage(imgData, "JPEG", 10, 15, imgWidth, imgHeight);
-        pdf.save(
-          `quotation-${quotationData.brandDetails.clientName || "download"}.pdf`
-        );
-        printArea.style.display = "none";
-      })
-      .catch((err) => {
-        console.error("Error generating PDF directly:", err);
-        printArea.style.display = "none";
-        alert("An error occurred while generating the PDF.");
-      });
+        const printWrap = document.getElementById("printWrap");
+        printWrap.innerHTML = "";
+        const itemHtml = buildPrintDocForItem(brandDetailsForPDF, item);
+        printWrap.appendChild(itemHtml);
+
+        printArea.style.display = "block";
+
+        try {
+          const canvas = await html2canvas(printArea, {
+            scale: 1.5,
+            useCORS: true,
+            allowTaint: true,
+          });
+          const imgData = canvas.toDataURL("image/jpeg", 0.95);
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const ratio = canvas.width / canvas.height;
+          const imgWidth = pdfWidth - 20;
+          const imgHeight = imgWidth / ratio;
+
+          if (i > 0) {
+            pdf.addPage();
+          }
+          pdf.addImage(imgData, "JPEG", 10, 15, imgWidth, imgHeight);
+        } catch (err) {
+          console.error(`Error processing page ${i + 1} for PDF:`, err);
+        } finally {
+          printArea.style.display = "none";
+        }
+      }
+      pdf.save(`quotation-${masterQuotationData.clientName || "download"}.pdf`);
+    });
   }
-  window.generatePDFDirectly = generatePDFDirectly;
+  window.generateMultiItemPDF = generateMultiItemPDF;
 });
