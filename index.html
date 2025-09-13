@@ -144,6 +144,9 @@
         padding: 10px 16px;
         border-bottom: 1px solid var(--border);
         font-weight: 700;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
       }
       .btn {
         appearance: none;
@@ -372,11 +375,19 @@
         color: var(--muted);
       }
 
+      .dashboard-filters {
+        display: flex;
+        gap: 8px;
+      }
+      .dashboard-filters select {
+        width: auto;
+        padding: 8px 12px;
+      }
       .dashboard-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
         gap: 12px;
-        margin-bottom: 12px;
+        margin-top: 16px;
       }
       @media (min-width: 720px) {
         .dashboard-grid {
@@ -679,7 +690,7 @@
               Adding products for: <span id="add-mode-client"></span>
             </div>
             <div class="row" style="gap: 12px">
-              <div style="flex: 1; min-width: 200px">
+              <div style="flex: 2; min-width: 200px">
                 <label class="small">Client Name *</label>
                 <input
                   id="main-client-name"
@@ -687,13 +698,17 @@
                   placeholder="Enter client's name to save"
                 />
               </div>
-              <div style="flex: 1; min-width: 200px">
+              <div style="flex: 2; min-width: 200px">
                 <label class="small">Client Mobile</label>
                 <input
                   id="main-client-mobile"
                   type="text"
                   placeholder="Enter client's mobile"
                 />
+              </div>
+              <div style="flex: 1; min-width: 100px">
+                <label class="small">Quantity</label>
+                <input id="main-quantity" type="number" value="1" min="1" />
               </div>
             </div>
           </div>
@@ -726,7 +741,13 @@
 
         <!-- Dashboard Section -->
         <div class="card" style="margin-top: 24px">
-          <div class="section-title">Dashboard</div>
+          <div class="section-title">
+            <span>Dashboard</span>
+            <div class="dashboard-filters">
+              <select id="dashboard-month-filter"></select>
+              <select id="dashboard-year-filter"></select>
+            </div>
+          </div>
           <div class="block">
             <div class="dashboard-grid">
               <div class="dashboard-card draft" id="dashboard-draft">
